@@ -97,7 +97,7 @@ class FedAvg(Server):
         ### Fed Client wise forgetting stage
         for i in range(self.global_rounds+1):
             s_t = time.time()
-            self.selected_clients = self.select_clients()
+            self.selected_clients, self.current_learn = self.unlearn_select_clients()
             self.send_models()
 
             if i%self.eval_gap == 0:
@@ -106,6 +106,7 @@ class FedAvg(Server):
                 self.evaluate()
 
             for client in self.selected_clients:
+                print(client.id)
                 client.train()
 
             # threads = [Thread(target=client.train)

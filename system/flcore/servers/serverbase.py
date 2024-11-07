@@ -175,9 +175,13 @@ class Server(object):
                 self.current_num_join_clients = self.num_join_clients
                 self.current_unlearn = self.current_num_join_clients // 4
                 self.current_learn = self.current_num_join_clients - self.current_unlearn
-            learn_selected_clients = list(np.random.choice(self.clients[0:self.num_clients // 4], self.current_learn, replace=False))
-            unlearn_selected_clients = list(np.random.choice(self.clients[self.num_clients // 4: self.num_clients], self.current_unlearn, replace=False))
+
+            learn_selected_clients = list(np.random.choice(self.clients[0:self.num_clients -self.num_clients // 4], self.current_learn, replace=False))
+            unlearn_selected_clients = list(np.random.choice(self.clients[self.num_clients - self.num_clients // 4: self.num_clients], self.current_unlearn, replace=False))
+            print(f"learn:{learn_selected_clients}")
+            print(f"unlearn:{unlearn_selected_clients}")
             selected_clients = learn_selected_clients + unlearn_selected_clients
+            print(f"all:{selected_clients}")
             return selected_clients, self.current_learn
         else:
             """
