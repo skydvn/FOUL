@@ -167,7 +167,7 @@ def run(args):
             args.model = LSTMNet(hidden_dim=args.feature_dim, vocab_size=args.vocab_size, num_classes=args.num_classes).to(args.device)
 
         elif model_str == "BiLSTM":
-            args.model = BiLSTM_TextClassification(input_size=args.vocab_size, hidden_size=args.feature_dim, 
+            args.model = BiLSTM_TextClassification(inpu/t_size=args.vocab_size, hidden_size=args.feature_dim,
                                                    output_size=args.num_classes, num_layers=1, 
                                                    embedding_dropout=0, lstm_dropout=0, attention_dropout=0, 
                                                    embedding_length=args.feature_dim).to(args.device)
@@ -220,7 +220,7 @@ def run(args):
 
         elif args.algorithm == "FedProx":
             server = FedProx(args, i)
-
+/
         elif args.algorithm == "FedFomo":
             server = FedFomo(args, i)
 
@@ -275,7 +275,7 @@ def run(args):
             args.model = BaseHeadSplit(args.model, args.head)
             server = MOON(args, i)
 
-        elif args.algorithm == "FedBABU":
+        elif args.algorithm == "FedBABU":/
             args.head = copy.deepcopy(args.model.fc)
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
@@ -351,7 +351,7 @@ def run(args):
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedGH(args, i)
 
-        elif args.algorithm == "FedDBE":
+        elif args.algorithm == "FedDBE":/
             args.head = copy.deepcopy(args.model.fc)
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)

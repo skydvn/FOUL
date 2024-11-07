@@ -21,7 +21,7 @@ from os import path
 random.seed(1)
 np.random.seed(1)
 num_clients = 20
-dir_path = "PACS/"
+dir_path  = "PACS/"
 data_path = "PACS/"
 
 
@@ -46,7 +46,7 @@ class PACS(Dataset):
 def read_domainnet_data(dataset_path, domain_name, split="train"):
     data_paths = []
     data_labels = []
-    split_file = path.join(dataset_path, "splits", "{}_{}.txt".format(domain_name, split))
+    split_file = path.join(dataset_path, "splits", "{}_{}_kfold.txt".format(domain_name, split))
     with open(split_file, "r") as f:
         lines = f.readlines()
         for line in lines:
@@ -77,8 +77,6 @@ def get_domainnet_dloader(dataset_path, domain_name):
     test_dataset = PACS(test_data_paths, test_data_labels, transforms_test, domain_name)
     test_loader = DataLoader(dataset=test_dataset, batch_size=len(test_dataset), shuffle=False)
     return train_loader, test_loader
-
-
 
 
 def generate_dataset(dir_path, num_clients, niid, balance, partition):
@@ -127,9 +125,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         
     num_classes = len(set(dataset_label))
     print(f'Number of classes: {num_classes}')
-        
-        
-        
+
     X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes,  
                                 niid, balance, partition, class_per_client=2)
     
