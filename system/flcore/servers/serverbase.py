@@ -43,6 +43,8 @@ class Server(object):
         self.random_join_ratio = args.random_join_ratio
         self.num_join_clients = int(self.num_clients * self.join_ratio)
         self.current_num_join_clients = self.num_join_clients
+        self.current_unlearn = self.current_num_join_clients // 4
+        self.current_learn = self.current_num_join_clients - self.current_unlearn
         self.algorithm = args.algorithm
         self.time_select = args.time_select
         self.goal = args.goal
@@ -160,6 +162,33 @@ class Server(object):
             selected_clients = [i for i in range(self.learn_clients_count)] ## fixed amount of clients used for learning
             #selected_clients = [i for i in range(int(self.learn_clients_precentage *  self.num_clients))] ## precentage of clients to unlearn
             
+            return selected_clients
+
+    def unlearn_select_clients(self):
+        if self.learning_status:
+            if self.random_join_ratio:
+                self.current_num_join_clients = \
+                np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]
+                self.current_unlearn = self.current_num_join_clients // 4
+                self.current_learn = self.current_num_join_clients - self.current_unlearn
+            else:
+                self.current_num_join_clients = self.num_join_clients
+                self.current_unlearn = self.current_num_join_clients // 4
+                self.current_learn = self.current_num_join_clients - self.current_unlearn
+            learn_selected_clients = list(np.random.choice(self.clients[0:self.num_clients // 4], self.current_learn, replace=False))
+            unlearn_selected_clients = list(np.random.choice(self.clients[self.num_clients // 4: self.num_clients], self.current_unlearn, replace=False))
+            selected_clients = learn_selected_clients + unlearn_selected_clients
+            return selected_clients, self.current_learn
+        else:
+            """
+            The process is like this 
+
+            """
+            ## as per the last meeting we set first 50 learning and make the rest of the client unlearning
+            selected_clients = [i for i in
+                                range(self.learn_clients_count)]  ## fixed amount of clients used for learning
+            # selected_clients = [i for i in range(int(self.learn_clients_percentage *  self.num_clients))] ## percentage of clients to unlearn
+
             return selected_clients
 
     def send_models(self):
