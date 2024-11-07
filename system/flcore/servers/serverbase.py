@@ -145,24 +145,14 @@ class Server(object):
             self.send_slow_rate)
 
     def select_clients(self):
-        if self.learning_status:
-            if self.random_join_ratio:
-                self.current_num_join_clients = np.random.choice(range(self.num_join_clients, self.num_clients+1), 1, replace=False)[0]
-            else:
-                self.current_num_join_clients = self.num_join_clients
-            selected_clients = list(np.random.choice(self.clients, self.current_num_join_clients, replace=False))
-
-            return selected_clients
+        if self.random_join_ratio:
+            self.current_num_join_clients = np.random.choice(range(self.num_join_clients, self.num_clients+1), 1, replace=False)[0]
         else:
-            """
-            The process is like this 
-            
-            """
-            ## as per the last meeting we set first 50 learning and make the rest of the client unlearning
-            selected_clients = [i for i in range(self.learn_clients_count)] ## fixed amount of clients used for learning
-            #selected_clients = [i for i in range(int(self.learn_clients_precentage *  self.num_clients))] ## precentage of clients to unlearn
-            
-            return selected_clients
+            self.current_num_join_clients = self.num_join_clients
+        selected_clients = list(np.random.choice(self.clients, self.current_num_join_clients, replace=False))
+
+        return selected_clients
+
 
     def unlearn_select_clients(self):
         if self.learning_status:
