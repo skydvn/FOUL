@@ -19,6 +19,11 @@ import time
 from flcore.clients.clientfoul import clientFOUL
 from flcore.servers.serverbase import Server
 from threading import Thread
+import torch
+import copy
+from torch.optim.lr_scheduler import StepLR
+import numpy as np
+import statistics
 
 
 class FOUL(Server):
@@ -34,6 +39,15 @@ class FOUL(Server):
 
         # self.load_model()
         self.Budget = []
+        self.update_grads = None
+        self.cagrad_c = args.c_parameter
+        self.cagrad_rounds = args.cagrad_rounds
+        self.cagrad_learning_rate = args.cagrad_learning_rate
+        self.momentum = args.momentum
+        self.step_size = args.step_size
+        self.gamma = args.gamma
+        self.device = args.device
+        model_origin = copy.deepcopy(args.model)
 
     def train(self):
         """Fed learning stage"""
@@ -126,7 +140,12 @@ class FOUL(Server):
                 break
 
         print("\nBest accuracy.")
-        # self.print_(max(self.rs_test_acc), max(
+        # self.print_(max(self.rs_test_acc), max(self.cagrad_c = args.c_parameter
+        self.cagrad_rounds = args.cagrad_rounds
+        self.cagrad_learning_rate = args.cagrad_learning_rate
+        self.momentum = args.momentum
+        self.step_size = args.step_size
+        self.gamma = args.gamma
         #     self.rs_train_acc), min(self.rs_train_loss))
         print(max(self.rs_test_acc))
         print("\nAverage time cost per round.")
@@ -189,7 +208,6 @@ class FOUL(Server):
         scheduler = StepLR(w_opt, step_size=self.step_size, gamma=self.gamma)
 
         c = (gg + 1e-4).sqrt() * self.cagrad_c
-
         w_best = None
         obj_best = np.inf
         for i in range(self.cagrad_rounds + 1):
@@ -251,8 +269,8 @@ class FOUL(Server):
     #             grads[beg:en, task].copy_(grad_cur.data.view(-1))
     #             cnt += 1
 
-    def grad2vec2(m, grads, task):
-        grads[:, task].fill_(0.0)
-        all_params = torch.cat([param.detach().view(-1) for param in m.parameters()])
-        # print(all_params.size())
-        grads[:, task].copy_(all_params)
+def grad2vec2(m, grads, task):
+    grads[:, task].fill_(0.0)
+    all_params = torch.cat([param.detach().view(-1) for param in m.parameters()])
+    # print(all_params.size())
+    grads[:, task].copy_(all_params)

@@ -505,9 +505,16 @@ if __name__ == "__main__":
     parser.add_argument('-Ts', "--T_start", type=float, default=0.95)
     parser.add_argument('-Te', "--T_end", type=float, default=0.98)
     # FedDBE
-    parser.add_argument('-mo', "--momentum", type=float, default=0.1)
+    # parser.add_argument('-mo', "--momentum", type=float, default=0.1)
     parser.add_argument('-klw', "--kl_weight", type=float, default=0.0)
-    
+    # FedCAGrad
+    parser.add_argument('-car', "--cagrad_rounds", type=int, default=100)
+    parser.add_argument('-calr', "--cagrad_learning_rate", type=float, default=25)
+    parser.add_argument('-mmt', "--momentum", type=float, default=0.5)
+    parser.add_argument('-ss', "--step_size", type=int, default=30)
+    parser.add_argument('-gam', "--gamma", type=float, default=0.5)
+    parser.add_argument('-c', "--c_parameter", type=float, default=0.5)
+
     
     ### unlearning arguments to be mentioned here 
     parser.add_argument('-learn','--learn', type=str, default="learn", help='Learn or Unlearn '

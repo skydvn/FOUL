@@ -220,6 +220,27 @@ class Server(object):
         for i, w in enumerate(self.uploaded_weights):
             self.uploaded_weights[i] = w / tot_samples
 
+    def receive_grads(self):
+
+        self.grads = copy.deepcopy(self.uploaded_models)
+        # This for copy the list to store all the gradient update value
+
+        for model in self.grads:
+            for param in model.parameters():
+                param.data.zero_()
+
+        for grad_model, local_model in zip(self.grads, self.uploaded_models):
+            for grad_param, local_param, global_param in zip(grad_model.parameters(), local_model.parameters(),
+                                                             self.global_model.parameters()):
+                grad_param.data = local_param.data - global_param.data
+
+        for w, client_model in zip(self.uploaded_weights, self.grads):
+            self.mul_params(w, client_model)
+
+    def mul_params(self, w, client_model):
+        for param in client_model.parameters():
+            param.data = param.data.clone() * w
+
     def aggregate_parameters(self):
         assert (len(self.uploaded_models) > 0)
 
@@ -453,3 +474,43 @@ class Server(object):
         ids = [c.id for c in self.new_clients]
 
         return ids, num_samples, tot_correct, tot_auc
+
+    def diff_weight(self, model1, model2):
+        params1 = [p.data for p in model1.parameters()]
+        params2 = [p.data for p in model2.parameters()]
+
+        # Tính hiệu và norm của hiệu giữa các parameter tương ứng
+        diff_norms = [torch.norm(p1 - p2, p='fro') for p1, p2 in zip(params1, params2)]
+
+        # Tính tổng (hoặc trung bình) của các norm này để có một đại lượng đơn lẻ mô tả sự khác biệt
+        total_diff_norm = torch.sum(torch.stack(diff_norms))
+        return total_diff_norm.item()
+
+    def cos_sim(self, prev_model, model1, model2):
+        prev_param = torch.cat([p.data.view(-1) for p in prev_model.parameters()])
+        params1 = torch.cat([p.data.view(-1) for p in model1.parameters()])
+        params2 = torch.cat([p.data.view(-1) for p in model2.parameters()])
+        # print(f"prev:{prev_param[0]}")
+        # print(f"p1:{params1[0]}")
+        # print(f"p2:{params2[0]}")
+
+        grad1 = params1 - prev_param
+        grad2 = params2
+        # print(f"prev:{torch.norm(prev_param)}|p1:{torch.norm(params1)}|p2:{torch.norm(params2)}")
+        # print(f"g1:{torch.norm(grad1)}|g2:{torch.norm(grad2)}")
+        # print(torch.dot(grad1, grad2))
+        # print((torch.norm(grad1) * torch.norm(grad2)))
+        cos_sim = torch.dot(grad1, grad2) / (torch.norm(grad1) * torch.norm(grad2))
+        # if torch.isnan(cos_sim):
+        #     print("cos_sim is NaN.")
+        #     print("value of params1", params1)
+        #     # print("value of params2", params)
+        #     print("Value of grad1:", grad1)
+        #     print("Value of grad2:", grad2)
+        return cos_sim.item()
+
+    def cosine_similarity(self, model1, model2):
+        params1 = torch.cat([p.data.view(-1) for p in model1.parameters()])
+        params2 = torch.cat([p.data.view(-1) for p in model2.parameters()])
+        cos_sim = torch.dot(params1, params2) / (torch.norm(params1) * torch.norm(params2))
+        return cos_sim.item()
