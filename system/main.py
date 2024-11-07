@@ -220,7 +220,7 @@ def run(args):
 
         elif args.algorithm == "FedProx":
             server = FedProx(args, i)
-/
+
         elif args.algorithm == "FedFomo":
             server = FedFomo(args, i)
 
@@ -275,7 +275,7 @@ def run(args):
             args.model = BaseHeadSplit(args.model, args.head)
             server = MOON(args, i)
 
-        elif args.algorithm == "FedBABU":/
+        elif args.algorithm == "FedBABU":
             args.head = copy.deepcopy(args.model.fc)
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
@@ -351,7 +351,7 @@ def run(args):
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedGH(args, i)
 
-        elif args.algorithm == "FedDBE":/
+        elif args.algorithm == "FedDBE":
             args.head = copy.deepcopy(args.model.fc)
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
@@ -371,14 +371,16 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedLC(args, i)
-            
+
         else:
             raise NotImplementedError
 
-        
-        if args.learn:
-            server.train()  ## this is the line which train the model (server is the model which is selected via args parse)
-        else :
+        if args.learn == "learn":
+            server.train()    ##
+        elif args.learn == "unlearn":
+            server.unlearn()  ## if unlearning
+        else:
+            server.train()
             server.unlearn()  ## if unlearning
 
         time_list.append(time.time()-start)
@@ -503,7 +505,8 @@ if __name__ == "__main__":
     
     
     ### unlearning arguments to be mentioned here 
-    parser.add_argument('-learn','--learn', type=bool, default=True, help='Learn or Unlearn should be mentioned here by default will learn')
+    parser.add_argument('-learn','--learn', type=str, default="learn", help='Learn or Unlearn '
+                                            'should be mentioned here by default will learn')
     parser.add_argument('-learn_count', "--learn_count", type=int, default=50,help="Number of clients we want to do learn")
     parser.add_argument('-learn_percentage', "--learn_percentage", type=int, default=50,help="Number of clients we want to do learn")
 
@@ -521,16 +524,4 @@ if __name__ == "__main__":
         print(arg, '=',getattr(args, arg))
     print("=" * 50)
 
-    # with torch.profiler.profile(
-    #     activities=[
-    #         torch.profiler.ProfilerActivity.CPU,
-    #         torch.profiler.ProfilerActivity.CUDA],
-    #     profile_memory=True, 
-    #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./log')
-    #     ) as prof:
-    # with torch.autograd.profiler.profile(profile_memory=True) as prof:
     run(args)
-
-    
-    # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
-    # print(f"\nTotal time cost: {round(time.time()-total_start, 2)}s.")

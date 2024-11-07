@@ -85,7 +85,6 @@ class FedAvg(Server):
             print("\nEvaluate new clients")
             self.evaluate()
 
-
     def unlearn(self):
         """ Need to put the fed unlearning part here which probably has a similar structure to the above learning part
         need to copy that code and configure it
