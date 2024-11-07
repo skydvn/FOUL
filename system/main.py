@@ -64,6 +64,7 @@ from flcore.servers.serverdbe import FedDBE
 from flcore.servers.servercac import FedCAC
 from flcore.servers.serverda import PFL_DA
 from flcore.servers.serverlc import FedLC
+from flcore.servers.serverfoul import FOUL
 
 from flcore.trainmodel.models import *
 
@@ -371,7 +372,11 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedLC(args, i)
-
+        elif args.algorithm == 'FOUL':
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = FOUL(args, i)
         else:
             raise NotImplementedError
 

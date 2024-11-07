@@ -106,7 +106,6 @@ class FedAvg(Server):
                 self.evaluate()
 
             for client in self.selected_clients:
-                print(client.id)
                 client.train()
 
             # threads = [Thread(target=client.train)
