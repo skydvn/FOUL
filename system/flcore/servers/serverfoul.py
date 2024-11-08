@@ -163,7 +163,7 @@ class FOUL(Server):
             print("\nEvaluate new clients")
             self.evaluate()
 
-    def cag(self, meta_weights, inner_weights, lr_meta):
+    def aggregate_foul(self, meta_weights, inner_weights, lr_meta):
 
         # Lấy tất cả parameter names
         param_names = [name for name, _ in meta_weights.named_parameters()]
@@ -179,17 +179,57 @@ class FOUL(Server):
 
         all_domains_grad_tensor = torch.stack(domain_grad_diffs)
         # print(all_domains_grad_tensor)
-        cagrad = self.cagrad(all_domains_grad_tensor, self.num_domains)
-        # print(cagrad)
+        foul_grad = self.foul_update(all_domains_grad_tensor, self.num_domains)
 
         # Cập nhật trọng số meta
         meta_weights_vector = parameters_to_vector(meta_weights.parameters())
-        vector_to_parameters(meta_weights_vector + cagrad * lr_meta, meta_weights.parameters())
+        vector_to_parameters(meta_weights_vector + foul_grad * lr_meta, meta_weights.parameters())
 
         # Tạo và in ra ParamDict mới từ trạng thái cập nhật của meta_weights
         updated_meta_weights = ParamDict(meta_weights.state_dict())
 
         return updated_meta_weights
+
+    def foul_update(self, grad_vec, num_tasks):
+        """
+        grad_vec: [num_tasks, dim]
+        """
+        grads = grad_vec
+
+        GG = grads.mm(grads.t()).cpu()
+        scale = (torch.diag(GG)+1e-4).sqrt().mean()
+        GG = GG / scale.pow(2)
+        Gg = GG.mean(1, keepdims=True)
+        gg = Gg.mean(0, keepdims=True)
+
+        w = torch.zeros(num_tasks, 1, requires_grad=True)
+        if num_tasks == 50:
+            w_opt = torch.optim.SGD([w], lr=50, momentum=0.5)
+        else:
+            w_opt = torch.optim.SGD([w], lr=25, momentum=0.5)
+
+        c = (gg+1e-4).sqrt() * self.cagrad_c
+
+        w_best = None
+        obj_best = np.inf
+        for i in range(21):
+            w_opt.zero_grad()
+            ww = torch.softmax(w, 0)
+            obj = ww.t().mm(Gg) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
+            if obj.item() < obj_best:
+                obj_best = obj.item()
+                w_best = w.clone()
+            if i < 20:
+                obj.backward(retain_graph=True)
+                w_opt.step()
+
+        ww = torch.softmax(w_best, 0)
+        gw_norm = (ww.t().mm(GG).mm(ww)+1e-4).sqrt()
+
+        lmbda = c.view(-1) / (gw_norm+1e-4)
+        g = ((1/num_tasks + ww * lmbda).view(
+            -1, 1).to(grads.device) * grads).sum(0) / (1 + self.cagrad_c**2)
+        return g
 
 #     def aggregate_foul(self):
 #         grad_ez = sum(p.numel() for p in self.global_model.parameters())
