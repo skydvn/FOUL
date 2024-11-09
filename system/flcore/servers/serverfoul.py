@@ -137,7 +137,7 @@ class FOUL(Server):
             # self.aggregate_foul()
             meta_weights = self.aggregate_foul(
                 meta_weights=self.global_model,
-                inner_weights=self.selected_clients, # This one should be list of models 
+                selected_clients=self.selected_clients, # This one should be list of models
                 lr_meta=self.meta_lr
             )
             self.global_model.load_state_dict(copy.deepcopy(meta_weights))
@@ -166,7 +166,7 @@ class FOUL(Server):
             print("\nEvaluate new clients")
             self.evaluate()
 
-    def aggregate_foul(self, meta_weights, inner_weights, lr_meta):
+    def aggregate_foul(self, meta_weights, selected_clients, lr_meta):
         # Lấy tất cả parameter names
         param_names = [name for name, _ in meta_weights.named_parameters()]
 
@@ -174,8 +174,8 @@ class FOUL(Server):
         domain_grad_diffs = []
         for i_domain in range(self.client):
             domain_grads = []
-            for (clone_param, meta_param, name) in zip(inner_weights[i_domain].parameters(), meta_weights.parameters(),
-                                                       param_names):
+            for (clone_param, meta_param, name) in zip(selected_clients[i_domain].model.parameters(),
+                                                       meta_weights.parameters(), param_names):
                 domain_grads.append(torch.zeros_like(torch.flatten(meta_param)))
             domain_grad_diffs.append(torch.cat(domain_grads))
 
