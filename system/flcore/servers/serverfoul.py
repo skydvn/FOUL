@@ -172,9 +172,9 @@ class FOUL(Server):
 
         # Tính toán gradient chênh lệch cho mỗi domain
         domain_grad_diffs = []
-        for i_domain in range(self.client):
+        for i_client in range(self.client):
             domain_grads = []
-            for (clone_param, meta_param, name) in zip(selected_clients[i_domain].model.parameters(),
+            for (clone_param, meta_param, name) in zip(selected_clients[i_client].model.parameters(),
                                                        meta_weights.parameters(), param_names):
                 domain_grads.append(torch.zeros_like(torch.flatten(meta_param)))
             domain_grad_diffs.append(torch.cat(domain_grads))
