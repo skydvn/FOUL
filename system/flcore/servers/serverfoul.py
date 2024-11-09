@@ -21,6 +21,7 @@ from flcore.servers.serverbase import Server
 from utils.model_utils import ParamDict
 from threading import Thread
 import torch
+from torch.nn.utils import vector_to_parameters, parameters_to_vector
 import copy
 from torch.optim.lr_scheduler import StepLR
 import numpy as np
