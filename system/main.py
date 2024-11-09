@@ -380,13 +380,15 @@ def run(args):
         else:
             raise NotImplementedError
 
+        """ Start of the learn/unlearn process"""
         if args.learn == "learn":
             server.train()    ##
         elif args.learn == "unlearn":
+            # Load models first
             server.unlearn()  ## if unlearning
         else:
             server.train()
-            server.unlearn()  ## if unlearning
+            server.unlearn()
 
         time_list.append(time.time()-start)
 

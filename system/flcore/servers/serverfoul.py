@@ -136,7 +136,7 @@ class FOUL(Server):
             meta_weights = self.aggregate_foul(
                 meta_weights=self.global_model,
                 inner_weights=self.selected_clients, # This one should be list of models 
-                lr_meta=self.hparams["meta_lr"]
+                lr_meta=self.meta_lr
             )
             self.network.reset_weights(meta_weights)
 
@@ -164,7 +164,6 @@ class FOUL(Server):
             self.evaluate()
 
     def aggregate_foul(self, meta_weights, inner_weights, lr_meta):
-
         # Lấy tất cả parameter names
         param_names = [name for name, _ in meta_weights.named_parameters()]
 

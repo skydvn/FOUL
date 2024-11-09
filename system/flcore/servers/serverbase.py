@@ -41,10 +41,12 @@ class Server(object):
         self.num_clients = args.num_clients
         self.join_ratio = args.join_ratio
         self.random_join_ratio = args.random_join_ratio
+
         self.num_join_clients = int(self.num_clients * self.join_ratio)
         self.current_num_join_clients = self.num_join_clients
         self.current_unlearn = self.current_num_join_clients // 4
         self.current_learn = self.current_num_join_clients - self.current_unlearn
+        
         self.algorithm = args.algorithm
         self.time_select = args.time_select
         self.goal = args.goal
