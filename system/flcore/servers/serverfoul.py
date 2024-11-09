@@ -184,7 +184,7 @@ class FOUL(Server):
 
         all_domains_grad_tensor = torch.stack(domain_grad_diffs)
         # print(all_domains_grad_tensor)
-        foul_grad = self.foul_update(all_domains_grad_tensor, self.num_domains)
+        foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
 
         # Cập nhật trọng số meta
         meta_weights_vector = parameters_to_vector(meta_weights.parameters())
