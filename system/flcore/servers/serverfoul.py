@@ -140,7 +140,7 @@ class FOUL(Server):
                 inner_weights=self.selected_clients, # This one should be list of models 
                 lr_meta=self.meta_lr
             )
-            self.load_state_dict(copy.deepcopy(meta_weights))
+            self.global_model.load_state_dict(copy.deepcopy(meta_weights))
             # self.network.reset_weights(meta_weights)
 
             self.Budget.append(time.time() - s_t)
