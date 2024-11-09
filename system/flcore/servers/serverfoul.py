@@ -184,9 +184,9 @@ class FOUL(Server):
             # In the future, based on i_client, append the client into retain // forget grads.
 
         all_domains_grad_tensor = torch.stack(domain_grad_diffs)
-        # print(all_domains_grad_tensor)
+        print(all_domains_grad_tensor)
         foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
-
+        print(f"foul grad: {foul_grad}")
         # Cập nhật trọng số meta
         meta_weights_vector = parameters_to_vector(meta_weights.parameters())
         vector_to_parameters(meta_weights_vector + foul_grad * lr_meta, meta_weights.parameters())
