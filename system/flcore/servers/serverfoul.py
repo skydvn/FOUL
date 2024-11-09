@@ -130,7 +130,7 @@ class FOUL(Server):
             # [t.join() for t in threads]
 
             self.receive_models()
-            self.receive_grads()
+            # self.receive_grads()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
 
@@ -138,7 +138,8 @@ class FOUL(Server):
             # self.aggregate_foul()
             meta_weights = self.aggregate_foul(
                 meta_weights=self.global_model,
-                selected_clients=self.selected_clients, # This one should be list of models
+                selected_clients=self.uploaded_models,
+                selected_id=self.upload_ids,
                 lr_meta=self.meta_lr
             )
             self.global_model.load_state_dict(copy.deepcopy(meta_weights))
@@ -167,18 +168,19 @@ class FOUL(Server):
             print("\nEvaluate new clients")
             self.evaluate()
 
-    def aggregate_foul(self, meta_weights, selected_clients, lr_meta):
+    def aggregate_foul(self, meta_weights, selected_clients, selected_id, lr_meta):
         # Lấy tất cả parameter names
         param_names = [name for name, _ in meta_weights.named_parameters()]
 
         # Tính toán gradient chênh lệch cho mỗi domain
         domain_grad_diffs = []
-        for i_client in range(self.client):
+        for i_client, client in zip(selected_id, selected_clients):
             domain_grads = []
-            for (clone_param, meta_param, name) in zip(selected_clients[i_client].model.parameters(),
+            for (clone_param, meta_param, name) in zip(client.parameters(),
                                                        meta_weights.parameters(), param_names):
                 domain_grads.append(torch.zeros_like(torch.flatten(meta_param)))
             domain_grad_diffs.append(torch.cat(domain_grads))
+            # In the future, based on i_client, append the client into retain // forget grads.
 
         all_domains_grad_tensor = torch.stack(domain_grad_diffs)
         # print(all_domains_grad_tensor)
