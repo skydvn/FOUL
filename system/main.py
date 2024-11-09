@@ -516,7 +516,7 @@ if __name__ == "__main__":
     parser.add_argument('-ss', "--step_size", type=int, default=30)
     parser.add_argument('-gam', "--gamma", type=float, default=0.5)
     parser.add_argument('-c', "--c_parameter", type=float, default=0.5)
-
+    parser.add_argument('-foulmlr', "--meta_lr", type=float, default=0.5)
     
     ### unlearning arguments to be mentioned here 
     parser.add_argument('-learn','--learn', type=str, default="learn", help='Learn or Unlearn '

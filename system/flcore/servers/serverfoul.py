@@ -46,6 +46,7 @@ class FOUL(Server):
         self.cagrad_learning_rate = args.cagrad_learning_rate
         self.momentum = args.momentum
         self.step_size = args.step_size
+        self.meta_lr = args.meta_lr
         self.gamma = args.gamma
         self.device = args.device
         model_origin = copy.deepcopy(args.model)
