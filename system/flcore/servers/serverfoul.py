@@ -139,7 +139,7 @@ class FOUL(Server):
             meta_weights = self.aggregate_foul(
                 meta_weights=self.global_model,
                 selected_clients=self.uploaded_models,
-                selected_id=self.upload_ids,
+                selected_id=self.uploaded_ids,
                 lr_meta=self.meta_lr
             )
             self.global_model.load_state_dict(copy.deepcopy(meta_weights))
