@@ -46,7 +46,7 @@ class Server(object):
         self.current_num_join_clients = self.num_join_clients
         self.current_unlearn = self.current_num_join_clients // 4
         self.current_learn = self.current_num_join_clients - self.current_unlearn
-        
+
         self.algorithm = args.algorithm
         self.time_select = args.time_select
         self.goal = args.goal

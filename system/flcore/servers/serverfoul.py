@@ -104,7 +104,9 @@ class FOUL(Server):
 
         create a separate function for the unlearning part here
 
-        for client in self.selected_clients:    ## (Question) in the unlearn function we need to set the clients to unlearn ---> but when it comes to client unlearn what data we need to specify right ??????
+        for client in self.selected_clients:    ## (Question) in the unlearn function we need to set the clients to
+                                                ##  unlearn ---> but when it comes to client unlearn what data we
+                                                ##  need to specify right ??????
                 client.unlearn()
         """
         ### Fed Client wise forgetting stage
@@ -138,7 +140,8 @@ class FOUL(Server):
                 inner_weights=self.selected_clients, # This one should be list of models 
                 lr_meta=self.meta_lr
             )
-            self.network.reset_weights(meta_weights)
+            self.load_state_dict(copy.deepcopy(meta_weights))
+            # self.network.reset_weights(meta_weights)
 
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
