@@ -223,7 +223,6 @@ class Server(object):
             self.uploaded_weights[i] = w / tot_samples
 
     def receive_grads(self):
-
         self.grads = copy.deepcopy(self.uploaded_models)
         # This for copy the list to store all the gradient update value
 

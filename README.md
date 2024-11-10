@@ -8,5 +8,5 @@ python main.py --learn False --learn_count 50
 ```
 
 ```
-python main.py --learn unlearn --learn_count 50 --algo FOUL 
+python main.py --learn unlearn --learn_count 50 --algo FOUL --ls 5
 ```
