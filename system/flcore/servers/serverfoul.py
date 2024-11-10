@@ -78,7 +78,7 @@ class FOUL(Server):
             # [t.start() for t in threads]
             # [t.join() for t in threads]
 
-            self.receive_models()foul_lr
+            self.receive_models()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
             self.aggregate_parameters()
@@ -102,7 +102,7 @@ class FOUL(Server):
         if self.num_new_clients > 0:
             self.eval_new_clients = True
             self.set_new_clients(clientFOUL)
-            print(f"\n-------------Fine tuning round-------------")foul_lr
+            print(f"\n-------------Fine tuning round-------------")
             print("\nEvaluate new clients")
             self.evaluate()
 
