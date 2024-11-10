@@ -78,7 +78,7 @@ class FOUL(Server):
             # [t.start() for t in threads]
             # [t.join() for t in threads]
 
-            self.receive_models()
+            self.receive_models()foul_lr
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
             self.aggregate_parameters()
@@ -102,7 +102,7 @@ class FOUL(Server):
         if self.num_new_clients > 0:
             self.eval_new_clients = True
             self.set_new_clients(clientFOUL)
-            print(f"\n-------------Fine tuning round-------------")
+            print(f"\n-------------Fine tuning round-------------")foul_lr
             print("\nEvaluate new clients")
             self.evaluate()
 
@@ -179,26 +179,27 @@ class FOUL(Server):
         # Lấy tất cả parameter names
         param_names = [name for name, _ in meta_weights.named_parameters()]
 
-        # Tính toán gradient chênh lệch cho mỗi domain
+        """
+        Hyper-gradients calculation & merge
+        - In this section, the all_domains_grad_tensor is arranged according to the selected_id
+        """
         all_client_grads = []
+        retain_grads = []
+        forget_grads = []
         for i_client, client in zip(selected_id, selected_clients):
             client_grad = [torch.flatten(inner_param - meta_param) for inner_param, meta_param in
                                  zip(client.parameters(), meta_weights.parameters())]
             client_grad_vector = torch.cat(client_grad)
-            all_client_grads.append(client_grad_vector)
-
-            # domain_grads = []
-            # for (clone_param, meta_param, name) in zip(client.parameters(),
-            #                                            meta_weights.parameters(), param_names):
-            #     domain_grads.append(torch.zeros_like(torch.flatten(meta_param)))
-            # domain_grad_diffs.append(torch.cat(domain_grads))
-
-            # In the future, based on i_client, append the client into retain // forget grads.
-
-        all_domains_grad_tensor = torch.stack(all_client_grads)
-        print(f"all clients: {all_domains_grad_tensor}")
-        foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
-        print(f"foul grad: {foul_grad}")
+            # all_client_grads.append(client_grad_vector)
+            if i_client > 15: # This part should be verified in the future to make it flexible to the data.
+                retain_grads.append(client_grad_vector)
+            else:
+                forget_grads.append(client_grad_vector)
+        retain_grad_tensor = torch.stack(retain_grads)
+        forget_grad_tensor = torch.stack(forget_grads)
+        # all_domains_grad_tensor = torch.stack(all_client_grads)
+        foul_grad = self.foul_update(retain_grad_tensor, forget_grad_tensor, len(selected_clients))
+        # foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
         # Cập nhật trọng số meta
         meta_weights_vector = parameters_to_vector(meta_weights.parameters())
         vector_to_parameters(meta_weights_vector + foul_grad * lr_meta, meta_weights.parameters())
@@ -208,11 +209,12 @@ class FOUL(Server):
 
         return updated_meta_weights
 
-    def foul_update(self, grad_vec, num_tasks):
+    def foul_update(self, retain_grad_vec, forget_grad_vec, num_tasks):
         """
-        grad_vec: [num_tasks, dim]
+        retain_grad_vec: [num_retain_clients, dim]
+        forget_grad_vec: [num_forget_clients, dim]
         """
-        grads = grad_vec
+        grads = retain_grad_vec
 
         GG = grads.mm(grads.t()).cpu()
         scale = (torch.diag(GG)+1e-4).sqrt().mean()
