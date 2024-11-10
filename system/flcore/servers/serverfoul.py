@@ -211,8 +211,8 @@ class FOUL(Server):
 
     def foul_update(self, retain_grad_vec, forget_grad_vec, num_clients):
         """
-        retain_grad_vec: [num_retain_clients, dim]
-        forget_grad_vec: [num_forget_clients, dim]
+        retain_grad_vec <torch tensor>: [num_retain_clients, dim]
+        forget_grad_vec <torch tensor>: [num_forget_clients, dim]
         """
         r_grads = retain_grad_vec
         f_grads = forget_grad_vec
