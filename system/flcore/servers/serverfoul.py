@@ -209,7 +209,7 @@ class FOUL(Server):
 
         return updated_meta_weights
 
-    def foul_update(self, retain_grad_vec, forget_grad_vec, num_tasks):
+    def foul_update(self, retain_grad_vec, forget_grad_vec, num_clients):
         """
         retain_grad_vec: [num_retain_clients, dim]
         forget_grad_vec: [num_forget_clients, dim]
@@ -231,9 +231,13 @@ class FOUL(Server):
         Ggf = GGf.mean(1, keepdims=True)
         ggf = Ggf.mean(0, keepdims=True)
 
+        # GG =
+        # Gg =
+        # gg =
+
         """ Define optimization variables w """
-        w = torch.zeros(num_tasks, 1, requires_grad=True)
-        if num_tasks == 50:
+        w = torch.zeros(num_clients, 1, requires_grad=True)
+        if num_clients == 50:
             w_opt = torch.optim.SGD([w], lr=self.foul_lr, momentum=0.5)
         else:
             w_opt = torch.optim.SGD([w], lr=self.foul_lr, momentum=0.5)
@@ -245,7 +249,10 @@ class FOUL(Server):
         for i in range(21):
             w_opt.zero_grad()
             ww = torch.softmax(w, 0)
-            obj = ww.t().mm(Gg) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
+            """ Minimization objective function """
+            # obj = ww.t().mm(Gg) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
+            obj = ww.t().mm(Ggr - Ggf) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
+
             if obj.item() < obj_best:
                 obj_best = obj.item()
                 w_best = w.clone()
@@ -257,9 +264,9 @@ class FOUL(Server):
         gw_norm = (ww.t().mm(GG).mm(ww)+1e-4).sqrt()
 
         lmbda = c.view(-1) / (gw_norm+1e-4)
-        # g = ((1/num_tasks + ww * lmbda).view(
+        # g = ((1/num_clients + ww * lmbda).view(
         #     -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c**2)
-        g = ((1 / num_tasks + ww * lmbda).view(
+        g = ((1 / num_clients + ww * lmbda).view(
             -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c ** 2)
 
         return g
@@ -289,7 +296,7 @@ class FOUL(Server):
 #
 #         self.grads_angle_value = statistics.mean(angle_value)
 #
-#     def cagrad(self, grad_vec, num_tasks):
+#     def cagrad(self, grad_vec, num_clients):
 #
 #         grads = grad_vec.to(self.device)
 #
@@ -300,10 +307,10 @@ class FOUL(Server):
 #         Gg = GG.mean(1, keepdims=True)
 #         gg = Gg.mean(0, keepdims=True)
 #
-#         w = torch.zeros(num_tasks, 1, requires_grad=True, device=self.device)
-#         #         w = torch.zeros(num_tasks, 1, requires_grad=True).to(self.device)
+#         w = torch.zeros(num_clients, 1, requires_grad=True, device=self.device)
+#         #         w = torch.zeros(num_clients, 1, requires_grad=True).to(self.device)
 #
-#         if num_tasks == 50:
+#         if num_clients == 50:
 #             w_opt = torch.optim.SGD([w], lr=self.foul_lr * 2, momentum=self.momentum)
 #         else:
 #             w_opt = torch.optim.SGD([w], lr=self.foul_lr, momentum=self.momentum)
@@ -331,7 +338,7 @@ class FOUL(Server):
 #         gw_norm = (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
 #
 #         lmbda = c.view(-1) / (gw_norm + 1e-4)
-#         g = ((1 / num_tasks + ww * lmbda).view(
+#         g = ((1 / num_clients + ww * lmbda).view(
 #             -1, 1).to(grads.device) * grads.t()).sum(0) / (1 + self.foul_c ** 2)
 #         return g
 #
