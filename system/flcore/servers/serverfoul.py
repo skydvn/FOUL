@@ -214,14 +214,24 @@ class FOUL(Server):
         retain_grad_vec: [num_retain_clients, dim]
         forget_grad_vec: [num_forget_clients, dim]
         """
-        grads = retain_grad_vec
+        r_grads = retain_grad_vec
+        f_grads = forget_grad_vec
 
-        GG = grads.mm(grads.t()).cpu()
-        scale = (torch.diag(GG)+1e-4).sqrt().mean()
-        GG = GG / scale.pow(2)
-        Gg = GG.mean(1, keepdims=True)
-        gg = Gg.mean(0, keepdims=True)
+        """ Retain mean grads """
+        GGr = r_grads.mm(r_grads.t()).cpu()
+        scale_r = (torch.diag(GGr)+1e-4).sqrt().mean()
+        GGr = GGr / scale_r.pow(2)
+        Ggr = GGr.mean(1, keepdims=True)
+        ggr = Ggr.mean(0, keepdims=True)
 
+        """ Forget mean grads """
+        GGf = f_grads.mm(f_grads.t()).cpu()
+        scale_f = (torch.diag(GGf)+1e-4).sqrt().mean()
+        GGf = GGf / scale_f.pow(2)
+        Ggf = GGf.mean(1, keepdims=True)
+        ggf = Ggf.mean(0, keepdims=True)
+
+        """ Define optimization variables w """
         w = torch.zeros(num_tasks, 1, requires_grad=True)
         if num_tasks == 50:
             w_opt = torch.optim.SGD([w], lr=self.foul_lr, momentum=0.5)
@@ -247,8 +257,11 @@ class FOUL(Server):
         gw_norm = (ww.t().mm(GG).mm(ww)+1e-4).sqrt()
 
         lmbda = c.view(-1) / (gw_norm+1e-4)
-        g = ((1/num_tasks + ww * lmbda).view(
-            -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c**2)
+        # g = ((1/num_tasks + ww * lmbda).view(
+        #     -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c**2)
+        g = ((1 / num_tasks + ww * lmbda).view(
+            -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c ** 2)
+
         return g
 
 #     def aggregate_foul(self):
