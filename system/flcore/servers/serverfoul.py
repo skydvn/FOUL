@@ -39,12 +39,18 @@ class FOUL(Server):
         print(f"\nJoin ratio / total clients: {self.join_ratio} / {self.num_clients}")
         print("Finished creating server and clients.")
 
+        """ Learn-Unlearn Round Split """
+        self.learn_round = args.learn_round
+        self.unlearn_round = args.global_rounds - self.learn_round
+        if self.unlearn_round < 0:
+            raise ValueError("The global rounds must be higher than learn round")
+
         # self.load_model()
         self.Budget = []
         self.update_grads = None
-        self.cagrad_c = args.c_parameter
-        self.cagrad_rounds = args.cagrad_rounds
-        self.cagrad_learning_rate = args.cagrad_learning_rate
+        self.foul_c = args.c_parameter
+        self.foul_rounds = args.cagrad_rounds
+        self.foul_lr = args.cagrad_learning_rate
         self.momentum = args.momentum
         self.step_size = args.step_size
         self.meta_lr = args.meta_lr
@@ -153,7 +159,7 @@ class FOUL(Server):
                 break
 
         print("\nBest accuracy.")
-        # self.print_(max(self.rs_test_acc), max(self.cagrad_c = args.c_parameter
+        # self.print_(max(self.rs_test_acc), max(self.foul_c = args.c_parameter
         #     self.rs_train_acc), min(self.rs_train_loss))
         print(max(self.rs_test_acc))
         print("\nAverage time cost per round.")
@@ -216,11 +222,11 @@ class FOUL(Server):
 
         w = torch.zeros(num_tasks, 1, requires_grad=True)
         if num_tasks == 50:
-            w_opt = torch.optim.SGD([w], lr=50, momentum=0.5)
+            w_opt = torch.optim.SGD([w], lr=self.foul_lr, momentum=0.5)
         else:
-            w_opt = torch.optim.SGD([w], lr=25, momentum=0.5)
+            w_opt = torch.optim.SGD([w], lr=self.foul_lr, momentum=0.5)
 
-        c = (gg+1e-4).sqrt() * self.cagrad_c
+        c = (gg+1e-4).sqrt() * self.foul_c
 
         w_best = None
         obj_best = np.inf
@@ -240,7 +246,7 @@ class FOUL(Server):
 
         lmbda = c.view(-1) / (gw_norm+1e-4)
         g = ((1/num_tasks + ww * lmbda).view(
-            -1, 1).to(grads.device) * grads).sum(0) / (1 + self.cagrad_c**2)
+            -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c**2)
         return g
 
 #     def aggregate_foul(self):
@@ -283,23 +289,23 @@ class FOUL(Server):
 #         #         w = torch.zeros(num_tasks, 1, requires_grad=True).to(self.device)
 #
 #         if num_tasks == 50:
-#             w_opt = torch.optim.SGD([w], lr=self.cagrad_learning_rate * 2, momentum=self.momentum)
+#             w_opt = torch.optim.SGD([w], lr=self.foul_lr * 2, momentum=self.momentum)
 #         else:
-#             w_opt = torch.optim.SGD([w], lr=self.cagrad_learning_rate, momentum=self.momentum)
+#             w_opt = torch.optim.SGD([w], lr=self.foul_lr, momentum=self.momentum)
 #
 #         scheduler = StepLR(w_opt, step_size=self.step_size, gamma=self.gamma)
 #
-#         c = (gg + 1e-4).sqrt() * self.cagrad_c
+#         c = (gg + 1e-4).sqrt() * self.foul_c
 #         w_best = None
 #         obj_best = np.inf
-#         for i in range(self.cagrad_rounds + 1):
+#         for i in range(self.foul_rounds + 1):
 #             w_opt.zero_grad()
 #             ww = torch.softmax(w, dim=0)
 #             obj = ww.t().mm(Gg) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
 #             if obj.item() < obj_best:
 #                 obj_best = obj.item()
 #                 w_best = w.clone()
-#             if i < self.cagrad_rounds:
+#             if i < self.foul_rounds:
 #                 obj.backward()
 #                 w_opt.step()
 #                 scheduler.step()
@@ -311,7 +317,7 @@ class FOUL(Server):
 #
 #         lmbda = c.view(-1) / (gw_norm + 1e-4)
 #         g = ((1 / num_tasks + ww * lmbda).view(
-#             -1, 1).to(grads.device) * grads.t()).sum(0) / (1 + self.cagrad_c ** 2)
+#             -1, 1).to(grads.device) * grads.t()).sum(0) / (1 + self.foul_c ** 2)
 #         return g
 #
 #         # def overwrite_grad(self, m, newgrad, grad_dims):

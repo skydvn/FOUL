@@ -521,7 +521,7 @@ if __name__ == "__main__":
     ### unlearning arguments to be mentioned here 
     parser.add_argument('-learn','--learn', type=str, default="learn", help='Learn or Unlearn '
                                             'should be mentioned here by default will learn')
-    parser.add_argument('-learn_count', "--learn_count", type=int, default=50,help="Number of clients we want to do learn")
+    parser.add_argument('-learn_round', "--learn_round", type=int, default=50,help="Number of clients we want to do learn")
     parser.add_argument('-learn_percentage', "--learn_percentage", type=int, default=50,help="Number of clients we want to do learn")
 
 
