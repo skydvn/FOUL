@@ -217,6 +217,12 @@ class FOUL(Server):
         r_grads = retain_grad_vec
         f_grads = forget_grad_vec
 
+        """ Get dim for averaging """
+        r_dim = r_grads.size()[0]
+        f_dim = f_grads.size()[0]
+        print(r_dim)
+        print(f_dim)
+
         """ Retain mean grads """
         GGr = r_grads.mm(r_grads.t()).cpu()
         scale_r = (torch.diag(GGr)+1e-4).sqrt().mean()
@@ -231,9 +237,10 @@ class FOUL(Server):
         Ggf = GGf.mean(1, keepdims=True)
         ggf = Ggf.mean(0, keepdims=True)
 
-        # GG =
-        # Gg =
-        # gg =
+        """ Get mean all """
+        GG = (GGr * r_dim + GGf * f_dim)/(r_dim + f_dim)
+        Gg = (Ggr * r_dim + Ggf * f_dim)/(r_dim + f_dim)
+        gg = (ggr * r_dim + ggf * f_dim)/(r_dim + f_dim)
 
         """ Define optimization variables w """
         w = torch.zeros(num_clients, 1, requires_grad=True)
