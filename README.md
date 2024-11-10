@@ -6,3 +6,7 @@ first 50 clients are used to train the model remainder are forgotten
 cd system/
 python main.py --learn False --learn_count 50
 ```
+
+```
+python main.py --learn unlearn --learn_count 50 --algo FOUL 
+```

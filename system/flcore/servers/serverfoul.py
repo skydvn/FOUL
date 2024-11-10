@@ -174,17 +174,23 @@ class FOUL(Server):
         param_names = [name for name, _ in meta_weights.named_parameters()]
 
         # Tính toán gradient chênh lệch cho mỗi domain
-        domain_grad_diffs = []
+        all_client_grads = []
         for i_client, client in zip(selected_id, selected_clients):
-            domain_grads = []
-            for (clone_param, meta_param, name) in zip(client.parameters(),
-                                                       meta_weights.parameters(), param_names):
-                domain_grads.append(torch.zeros_like(torch.flatten(meta_param)))
-            domain_grad_diffs.append(torch.cat(domain_grads))
+            client_grad = [torch.flatten(inner_param - meta_param) for inner_param, meta_param in
+                                 zip(client.parameters(), meta_weights.parameters())]
+            client_grad_vector = torch.cat(client_grad)
+            all_client_grads.append(client_grad_vector)
+
+            # domain_grads = []
+            # for (clone_param, meta_param, name) in zip(client.parameters(),
+            #                                            meta_weights.parameters(), param_names):
+            #     domain_grads.append(torch.zeros_like(torch.flatten(meta_param)))
+            # domain_grad_diffs.append(torch.cat(domain_grads))
+
             # In the future, based on i_client, append the client into retain // forget grads.
 
-        all_domains_grad_tensor = torch.stack(domain_grad_diffs)
-        print(all_domains_grad_tensor)
+        all_domains_grad_tensor = torch.stack(all_client_grads)
+        print(f"all clients: {all_domains_grad_tensor}")
         foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
         print(f"foul grad: {foul_grad}")
         # Cập nhật trọng số meta
