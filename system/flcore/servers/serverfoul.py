@@ -220,8 +220,8 @@ class FOUL(Server):
         """ Get dim for averaging """
         r_dim = r_grads.size()[0]
         f_dim = f_grads.size()[0]
-        print(r_dim)
-        print(f_dim)
+        print(r_grads.size())
+        print(f_grads.size())
 
         """ Retain mean grads """
         GGr = r_grads.mm(r_grads.t()).cpu()
@@ -241,8 +241,8 @@ class FOUL(Server):
         print(f"GGf: {GGf.size()}| Ggf: {Ggf.size()}| ggf: {ggf.size()}")
 
         """ Get mean all """
-        GG = (GGr * r_dim + GGf * f_dim)/(r_dim + f_dim)    # should be torch.stack()
-        Gg = (Ggr * r_dim + Ggf * f_dim)/(r_dim + f_dim)    # should be torch.stack()
+        # GG = r_grads.mm(r_grads.t()).cpu()
+        Gg = torch.cat((Ggr, Ggf), dim=1)
         gg = (ggr * r_dim + ggf * f_dim)/(r_dim + f_dim)
 
         """ Define optimization variables w """
@@ -261,7 +261,10 @@ class FOUL(Server):
             ww = torch.softmax(w, 0)
             """ Minimization objective function """
             # obj = ww.t().mm(Gg) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
-            obj = ww.t().mm(Ggr - Ggf) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
+            obj = (ww.t().mm(Ggr - Ggf)
+                   + c * (ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
+                          - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim]) + 1e-4).sqrt()
+                  )
 
             if obj.item() < obj_best:
                 obj_best = obj.item()
