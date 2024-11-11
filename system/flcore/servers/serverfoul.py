@@ -201,6 +201,7 @@ class FOUL(Server):
         foul_grad = self.foul_update(retain_grad_tensor, forget_grad_tensor, len(selected_clients))
         # foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
         # Cập nhật trọng số meta
+        print(foul_grad.size())
         meta_weights_vector = parameters_to_vector(meta_weights.parameters())
         vector_to_parameters(meta_weights_vector + foul_grad * lr_meta, meta_weights.parameters())
 
