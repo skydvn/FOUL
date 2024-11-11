@@ -160,8 +160,8 @@ cython_debug/
 #.idea/
 
 # extra dir
-dataset/PACS
-dataset/VLCS
-dataset/office_home
+PACS/
+VLCS/
+office_home/
 conversion/download
 conversion/export

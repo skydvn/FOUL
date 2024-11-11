@@ -43,7 +43,7 @@ class PACS(Dataset):
         return len(self.data_paths)
     
 
-def read_domainnet_data(dataset_path, domain_name, split="train"):
+def read_pacs_data(dataset_path, domain_name, split="train"):
     data_paths = []
     data_labels = []
     split_file = path.join(dataset_path, "splits", "{}_{}_kfold.txt".format(domain_name, split))
@@ -60,9 +60,9 @@ def read_domainnet_data(dataset_path, domain_name, split="train"):
 
 
 
-def get_domainnet_dloader(dataset_path, domain_name):
-    train_data_paths, train_data_labels = read_domainnet_data(dataset_path, domain_name, split="train")
-    test_data_paths, test_data_labels = read_domainnet_data(dataset_path, domain_name, split="test")
+def get_pacs_dloader(dataset_path, domain_name):
+    train_data_paths, train_data_labels = read_pacs_data(dataset_path, domain_name, split="train")
+    test_data_paths, test_data_labels = read_pacs_data(dataset_path, domain_name, split="test")
     transforms_train = transforms.Compose([
         transforms.RandomResizedCrop(64, scale=(0.75, 1)),
         transforms.RandomHorizontalFlip(),
@@ -107,7 +107,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     ## the data_loader will split into test and train sets
     X, y = [], []
     for d in domains:
-        train_loader, test_loader = get_domainnet_dloader(root, d)
+        train_loader, test_loader = get_pacs_dloader(root, d)
         for _, tt in enumerate(train_loader):
             train_data, train_label = tt
         for _, tt in enumerate(test_loader):
