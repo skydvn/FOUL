@@ -191,7 +191,7 @@ class FOUL(Server):
                                  zip(client.parameters(), meta_weights.parameters())]
             client_grad_vector = torch.cat(client_grad)
             # all_client_grads.append(client_grad_vector)
-            if i_client > 15: # This part should be verified in the future to make it flexible to the data.
+            if i_client < 15: # This part should be verified in the future to make it flexible to the data.
                 retain_grads.append(client_grad_vector)
             else:
                 forget_grads.append(client_grad_vector)
@@ -237,9 +237,12 @@ class FOUL(Server):
         Ggf = GGf.mean(1, keepdims=True)
         ggf = Ggf.mean(0, keepdims=True)
 
+        print(f"GGr: {GGr.size()}| Ggr: {Ggr.size()}| ggr: {ggr.size()}")
+        print(f"GGf: {GGf.size()}| Ggf: {Ggf.size()}| ggf: {ggf.size()}")
+
         """ Get mean all """
-        GG = (GGr * r_dim + GGf * f_dim)/(r_dim + f_dim)
-        Gg = (Ggr * r_dim + Ggf * f_dim)/(r_dim + f_dim)
+        GG = (GGr * r_dim + GGf * f_dim)/(r_dim + f_dim)    # should be torch.stack()
+        Gg = (Ggr * r_dim + Ggf * f_dim)/(r_dim + f_dim)    # should be torch.stack()
         gg = (ggr * r_dim + ggf * f_dim)/(r_dim + f_dim)
 
         """ Define optimization variables w """

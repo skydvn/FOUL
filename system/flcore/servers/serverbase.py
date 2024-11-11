@@ -84,7 +84,7 @@ class Server(object):
         self.fine_tuning_epoch_new = args.fine_tuning_epoch_new
         
         ##unlearning part
-        self.learn_clients_count = args.learn_count
+        self.learn_clients_count = args.learn_round
         self.learning_status = args.learn
         #self.learn_clients_precentage = args.learn_client_percentage
 
