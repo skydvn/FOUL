@@ -241,8 +241,6 @@ class FOUL(Server):
         ggf = Ggf.mean(0, keepdims=True)
 
         """ Get mean all """
-        # GG = r_grads.mm(r_grads.t()).cpu()
-        # Gg = torch.cat((Ggr, Ggf), dim=0)
         gg = (ggr * r_dim + ggf * f_dim)/(r_dim + f_dim)
 
         """ Define optimization variables w """
@@ -260,7 +258,6 @@ class FOUL(Server):
             w_opt.zero_grad()
             ww = torch.softmax(w, 0)
             """ Minimization objective function """
-            # obj = ww.t().mm(Gg) + c * (ww.t().mm(GG).mm(ww) + 1e-4).sqrt()
             obj = (
                    (ww[0:r_dim].t().mm(Ggr) - ww[r_dim:r_dim+f_dim].t().mm(Ggf))
                    + c * (ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
@@ -275,21 +272,18 @@ class FOUL(Server):
                 w_opt.step()
 
         ww = torch.softmax(w_best, 0)
-        # gw_norm = (ww.t().mm(GG).mm(ww)+1e-4).sqrt()
         gw_norm = (ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
                           - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim]) + 1e-4).sqrt()
 
         lmbda = c.view(-1) / (gw_norm+1e-4)
 
-        # g = ((1/num_clients + ww * lmbda).view(
-        #     -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c**2)
         g = (torch.cat((r_grads.cpu(),f_grads.cpu()), dim=0).mean(0)).view(-1, 1)
         g += lmbda * ((r_grads.cpu() * ww[0:r_dim]).sum(0) -
                       (f_grads.cpu() * ww[r_dim:r_dim+f_dim]).sum(0)
                       ).view(-1, 1)
         g /= (1 + self.foul_c ** 2)
 
-        return g.cuda()
+        return (g.squeeze()).cuda()
 
 #     def aggregate_foul(self):
 #         grad_ez = sum(p.numel() for p in self.global_model.parameters())
