@@ -189,19 +189,21 @@ class FOUL(Server):
         for i_client, client in zip(selected_id, selected_clients):
             client_grad = [torch.flatten(inner_param - meta_param) for inner_param, meta_param in
                                  zip(client.parameters(), meta_weights.parameters())]
-            client_grad_vector = torch.cat(client_grad)
+            client_grad_vector = torch.cat(client_grad).cpu()
             # all_client_grads.append(client_grad_vector)
             if i_client < 15: # This part should be verified in the future to make it flexible to the data.
                 retain_grads.append(client_grad_vector)
             else:
                 forget_grads.append(client_grad_vector)
-        retain_grad_tensor = torch.stack(retain_grads)
-        forget_grad_tensor = torch.stack(forget_grads)
+        retain_grad_tensor = torch.stack(retain_grads).cpu()
+        forget_grad_tensor = torch.stack(forget_grads).cpu()
         # all_domains_grad_tensor = torch.stack(all_client_grads)
         foul_grad = self.foul_update(retain_grad_tensor, forget_grad_tensor, len(selected_clients))
         # foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
-        # Cập nhật trọng số meta
-        print(foul_grad.size())
+
+        """ Update Grad to Model Parameters """
+        print(f"foul_grad: {foul_grad.size()}")
+
         meta_weights_vector = parameters_to_vector(meta_weights.parameters())
         vector_to_parameters(meta_weights_vector + foul_grad * lr_meta, meta_weights.parameters())
 
@@ -223,8 +225,6 @@ class FOUL(Server):
         """ Get dim for averaging """
         r_dim = r_grads.size()[0]
         f_dim = f_grads.size()[0]
-        print(r_grads.size())
-        print(f_grads.size())
 
         """ Retain mean grads """
         GGr = r_grads.mm(r_grads.t()).cpu()
@@ -239,9 +239,6 @@ class FOUL(Server):
         GGf = GGf / scale_f.pow(2)
         Ggf = GGf.mean(1, keepdims=True)
         ggf = Ggf.mean(0, keepdims=True)
-
-        print(f"GGr: {GGr.size()}| Ggr: {Ggr.size()}| ggr: {ggr.size()}")
-        print(f"GGf: {GGf.size()}| Ggf: {Ggf.size()}| ggf: {ggf.size()}")
 
         """ Get mean all """
         # GG = r_grads.mm(r_grads.t()).cpu()
@@ -284,8 +281,6 @@ class FOUL(Server):
 
         lmbda = c.view(-1) / (gw_norm+1e-4)
 
-        print((r_grads * (ww[0:r_dim].to(r_grads.device))).sum(0))
-        print((f_grads * (ww[r_dim:r_dim+f_dim].to(f_grads.device))).sum(0))
         # g = ((1/num_clients + ww * lmbda).view(
         #     -1, 1).to(grads.device) * grads).sum(0) / (1 + self.foul_c**2)
         g = (torch.cat((r_grads.cpu(),f_grads.cpu()), dim=0).mean(0)).view(-1, 1)
@@ -294,7 +289,7 @@ class FOUL(Server):
                       ).view(-1, 1)
         g /= (1 + self.foul_c ** 2)
 
-        return g.to(r_grads.device)
+        return g.cuda()
 
 #     def aggregate_foul(self):
 #         grad_ez = sum(p.numel() for p in self.global_model.parameters())
