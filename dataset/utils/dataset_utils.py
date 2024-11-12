@@ -221,7 +221,17 @@ def separate_data(data, num_clients, num_classes, niid=False, balance=False, par
     return X, y, statistic
 
 
-def separate_domain_data(data, num_clients, num_classes, niid=False, balance=False, partition=None, class_per_client=None):
+def separate_domain_data(data, num_clients, num_classes, num_domains,
+                         niid=False, balance=False, partition=None, class_per_client=None):
+
+    """
+    Total number of clients:
+    - In the next part, the (num_clients/num_domains) clients will be assigned to each domain. Thus:
+    - Loop for (i) in (num_domains)
+        1. Each domain (i) will consider data[i].
+        2.
+
+    """
     X = [[] for _ in range(num_clients)]
     y = [[] for _ in range(num_clients)]
     statistic = [[] for _ in range(num_clients)]

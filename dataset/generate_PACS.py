@@ -7,7 +7,7 @@ import random
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from utils.dataset_utils import check, separate_data, split_data, save_file
+from utils.dataset_utils import check, separate_data, separate_domain_data, split_data, save_file
 from torchvision.datasets import ImageFolder, DatasetFolder
 from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets
@@ -126,9 +126,11 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     num_classes = len(set(dataset_label))
     print(f'Number of classes: {num_classes}')
 
-    X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes,  
+    X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes,
                                 niid, balance, partition, class_per_client=2)
-    
+    # X, y, statistic = separate_domain_data((dataset_image, dataset_label), num_clients, num_classes, num_domains,
+    #                                         niid, balance, partition, class_per_client=2)
+
     train_data, test_data = split_data(X, y)
     # save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes,
     #             statistic, niid, balance, partition)
