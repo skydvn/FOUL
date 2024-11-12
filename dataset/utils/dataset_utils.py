@@ -64,6 +64,7 @@ def separate_data(data, num_clients, num_classes, niid=False, balance=False, par
         partition = 'pat'
         class_per_client = num_classes
 
+    print(f"partition: {partition}")
     if partition == 'pat':
         idxs = np.array(range(len(dataset_label)))
         idx_for_each_class = []
@@ -131,7 +132,7 @@ def separate_data(data, num_clients, num_classes, niid=False, balance=False, par
         This version in PFLlib is slightly different from the original version 
         Some changes are as follows:
         n_nets -> num_clients, n_class -> num_classes
-        '''class_num_per_client
+        '''
         C = class_per_client
         
         '''The first level: allocate labels to clients

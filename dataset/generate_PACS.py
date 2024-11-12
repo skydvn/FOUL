@@ -106,30 +106,34 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     
     ## the data_loader will split into test and train sets
     X, y = [], []
+    dataset_image = []
+    dataset_label = []
     for d in domains:
         train_loader, test_loader = get_pacs_dloader(root, d)
         for _, tt in enumerate(train_loader):
             train_data, train_label = tt
         for _, tt in enumerate(test_loader):
             test_data, test_label = tt
-        dataset_image = []
-        dataset_label = []
-        dataset_image.extend(train_data.cpu().detach().numpy())
-        dataset_image.extend(test_data.cpu().detach().numpy())
-        dataset_label.extend(train_label.cpu().detach().numpy())
-        dataset_label.extend(test_label.cpu().detach().numpy())
+        dataset_image_d = []
+        dataset_label_d = []
+        dataset_image_d.extend(train_data.cpu().detach().numpy())
+        dataset_image_d.extend(test_data.cpu().detach().numpy())
+        dataset_label_d.extend(train_label.cpu().detach().numpy())
+        dataset_label_d.extend(test_label.cpu().detach().numpy())
         
         
-        dataset_image = np.array(dataset_image)
-        dataset_label = np.array(dataset_label)
-        
-    num_classes = len(set(dataset_label))
-    print(f'Number of classes: {num_classes}')
+        dataset_image_d = np.array(dataset_image_d)
+        dataset_label_d = np.array(dataset_label_d)
+        dataset_image.append(dataset_image_d)
+        dataset_label.append(dataset_label_d)
 
-    X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes,
-                                niid, balance, partition, class_per_client=2)
-    # X, y, statistic = separate_domain_data((dataset_image, dataset_label), num_clients, num_classes, num_domains,
-    #                                         niid, balance, partition, class_per_client=2)
+    num_classes = len(set([item for sublist in dataset_image for item in sublist]))
+    print(f'Number of classes: {num_classes}')
+    #
+    # X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes,
+    #                             niid, balance, partition, class_per_client=2)
+    X, y, statistic = separate_domain_data((dataset_image, dataset_label), num_clients, num_classes, 4,
+                                            niid, balance, partition, class_per_client=2)
 
     train_data, test_data = split_data(X, y)
     # save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes,
