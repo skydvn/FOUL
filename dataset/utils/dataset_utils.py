@@ -256,15 +256,26 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
     if partition == 'pat':
         """ 
         Loop over domains here 
-        1. Assign for every (num_clients/num_domains)*(i_domain-1) to (num_clients/num_domains)*(i_domain) only.
-        2. 
+        1. What if num_clients surpass num_domains?
+        2. Assign for every (num_clients/num_domains)*(i_domain-1) to (num_clients/num_domains)*(i_domain) only.
+        3. 
         """
+        if num_clients % num_domains == 0:
+            num_dclients = [int(num_clients / num_domains) for _ in range(num_domains)]
+        else:
+            num_dclients = [int(np.ceil(num_clients / num_domains)) for i in range(num_domains - 1)]
+            num_dclients += [int(num_clients % num_domains)]
+
         for i_domain in range(num_domains):
             idxs = np.array(range(len(dataset_label[i_domain])))  # Get indexes of all values in "dataset_label"
             idx_for_each_class = []
             for i in range(num_classes):
                 idx_for_each_class.append(idxs[dataset_label[i_domain] == i])
 
+            """ 
+            - This num_clients should be (num_dclient = num_clients/num_domains) instead.
+            -  
+            """
             class_num_per_client = [class_per_client for _ in range(num_clients)]
             for i in range(num_classes):
                 selected_clients = []
