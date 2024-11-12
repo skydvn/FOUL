@@ -279,6 +279,7 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
             -  
             """
             class_num_per_client = [class_per_client for _ in range(num_dclients[i_domain])]
+            print(f"len: {len(class_num_per_client)}| {class_num_per_client}")
             for i in range(num_classes):
                 selected_clients = []
                 for client in range(num_dclients[i_domain]):
@@ -288,7 +289,7 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
                     break
                 # Remove clients that does not have that class
                 selected_clients = selected_clients[:int(np.ceil((num_dclients[i_domain] / num_classes) * class_per_client))]
-                print(selected_clients)
+
                 num_all_samples = len(idx_for_each_class[i])
                 num_selected_clients = len(selected_clients)
                 num_per = num_all_samples / num_selected_clients     # Average number of samples per client
@@ -301,10 +302,10 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
 
                 idx = 0
                 for i_client, num_sample in zip(selected_clients, num_samples):
-                    if i_domain == 0:
-                        client = i_client
-                    else:
-                        client = i_client + num_dclients[0:i_domain-1]
+                    client = i_client + sum(num_dclients[0:i_domain])
+                    # print(f"i_domain: {i_domain}")
+                    # print(f"client: {client} | {i_client} | {num_dclients}")
+                    # print(f"{sum(num_dclients[0:i_domain-1])} | {num_dclients[0:i_domain-1]}")
                     if client not in dataidx_map.keys():
                         dataidx_map[client] = idx_for_each_class[i][idx:idx + num_sample]
                     else:
@@ -312,7 +313,8 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
                                                         idx_for_each_class[i][idx:idx + num_sample],
                                                         axis=0)
                     idx += num_sample
-                    class_num_per_client[client] -= 1
+                    # print(f"before: {class_num_per_client}")
+                    class_num_per_client[i_client] -= 1
 
 
     elif partition == "dir":
@@ -426,14 +428,20 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
     else:
         raise NotImplementedError
 
+    print(f"label: {len(dataset_label)} | {dataset_label}")
     # assign data
-    for client in range(num_clients):
-        idxs = dataidx_map[client]
-        X[client] = dataset_content[idxs]
-        y[client] = dataset_label[idxs]
+    for i_domain in range(num_domains):
+        for client in range(num_dclients[i_domain]):
+            idxs = dataidx_map[client]
+            # print(idxs)
+            """convert here """
+            print(f"domain {i_domain}: || {len(dataset_content[i_domain])} || {idxs}")
+            print(len(dataset_content[i_domain]))
+            X[client] = dataset_content[i_domain][idxs]
+            y[client] = dataset_label[i_domain][idxs]
 
-        for i in np.unique(y[client]):
-            statistic[client].append((int(i), int(sum(y[client] == i))))
+            for i in np.unique(y[client]):
+                statistic[client].append((int(i), int(sum(y[client] == i))))
 
     del data
     # gc.collect()

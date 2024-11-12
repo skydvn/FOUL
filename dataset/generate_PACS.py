@@ -108,7 +108,8 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     X, y = [], []
     dataset_image = []
     dataset_label = []
-    for d in domains:
+    class_unique = []
+    for id, d in enumerate(domains):
         train_loader, test_loader = get_pacs_dloader(root, d)
         for _, tt in enumerate(train_loader):
             train_data, train_label = tt
@@ -126,8 +127,10 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         dataset_label_d = np.array(dataset_label_d)
         dataset_image.append(dataset_image_d)
         dataset_label.append(dataset_label_d)
+        print(f"domain {id}: {len(dataset_label_d)}")
 
-    num_classes = len(set([item for sublist in dataset_image for item in sublist]))
+        class_unique.extend(set(dataset_label[id]))
+    num_classes = len(set(class_unique))
     print(f'Number of classes: {num_classes}')
     #
     # X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes,
