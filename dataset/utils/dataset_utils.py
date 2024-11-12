@@ -227,6 +227,7 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
     """
     Total number of clients:
     - In the next part, the (num_clients/num_domains) clients will be assigned to each domain. Thus:
+    - The (partition + niid) parts are "pertained".
     - Loop for (i) in (num_domains)
         1. Each domain (i) will consider data[i].
         2.
@@ -242,10 +243,12 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
 
     dataidx_map = {}
 
+    """ IID: every clients have full classes """
     if not niid:
         partition = 'pat'
         class_per_client = num_classes
 
+    """ IID will do the PAT """
     if partition == 'pat':
         idxs = np.array(range(len(dataset_label)))
         idx_for_each_class = []
@@ -282,8 +285,11 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
                 idx += num_sample
                 class_num_per_client[client] -= 1
 
+
     elif partition == "dir":
-        # https://github.com/IBM/probabilistic-federated-neural-matching/blob/master/experiment.py
+        """ Non-IID and DIR 
+        https://github.com/IBM/probabilistic-federated-neural-matching/blob/master/experiment.py
+        """
         min_size = 0
         K = num_classes
         N = len(dataset_label)
@@ -309,20 +315,22 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
         for j in range(num_clients):
             dataidx_map[j] = idx_batch[j]
 
+
     elif partition == 'exdir':
-        r'''This strategy comes from https://arxiv.org/abs/2311.03154
+        """ Non-IID and EXDIR 
+        This strategy comes from https://arxiv.org/abs/2311.03154
         See details in https://github.com/TsingZ0/PFLlib/issues/139
 
         This version in PFLlib is slightly different from the original version 
         Some changes are as follows:
         n_nets -> num_clients, n_class -> num_classes
-        '''
+        """
         C = class_per_client
 
-        '''The first level: allocate labels to clients
+        """ The first level: allocate labels to clients
         clientidx_map (dict, {label: clientidx}), e.g., C=2, num_clients=5, num_classes=10
             {0: [0, 1], 1: [1, 2], 2: [2, 3], 3: [3, 4], 4: [4, 5], 5: [5, 6], 6: [6, 7], 7: [7, 8], 8: [8, 9], 9: [9, 0]}
-        '''
+        """
         min_size_per_label = 0
         # You can adjust the `min_require_size_per_label` to meet you requirements
         min_require_size_per_label = max(C * num_clients // num_classes // 2, 1)
