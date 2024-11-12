@@ -282,27 +282,33 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
                 selected_clients = []
                 for client in range(num_dclients[i_domain]):
                     if class_num_per_client[client] > 0:
-                        selected_clients.append(client)
+                        selected_clients.append(client) # if client has that class -> assign
                 if len(selected_clients) == 0:
                     break
+                # Remove clients that does not have that class
                 selected_clients = selected_clients[:int(np.ceil((num_dclients[i_domain] / num_classes) * class_per_client))]
-
+                print(selected_clients)
                 num_all_samples = len(idx_for_each_class[i])
                 num_selected_clients = len(selected_clients)
-                num_per = num_all_samples / num_selected_clients
-                if balance:
+                num_per = num_all_samples / num_selected_clients     # Average number of samples per client
+                if balance:  # Each client has same number of samples
                     num_samples = [int(num_per) for _ in range(num_selected_clients - 1)]
-                else:
+                else:        # Random from range [num_per/10; num_per], with size of num_selected_clients-1
                     num_samples = np.random.randint(max(num_per / 10, least_samples / num_classes), num_per,
                                                     num_selected_clients - 1).tolist()
-                num_samples.append(num_all_samples - sum(num_samples))
+                num_samples.append(num_all_samples - sum(num_samples))  # last selected_clients
 
                 idx = 0
-                for client, num_sample in zip(selected_clients, num_samples):
+                for i_client, num_sample in zip(selected_clients, num_samples):
+                    if i_domain == 0:
+                        client = i_client
+                    else:
+                        client = i_client + num_dclients[0:i_domain-1]
                     if client not in dataidx_map.keys():
                         dataidx_map[client] = idx_for_each_class[i][idx:idx + num_sample]
                     else:
-                        dataidx_map[client] = np.append(dataidx_map[client], idx_for_each_class[i][idx:idx + num_sample],
+                        dataidx_map[client] = np.append(dataidx_map[client],
+                                                        idx_for_each_class[i][idx:idx + num_sample],
                                                         axis=0)
                     idx += num_sample
                     class_num_per_client[client] -= 1
