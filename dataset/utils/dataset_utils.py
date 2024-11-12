@@ -131,7 +131,7 @@ def separate_data(data, num_clients, num_classes, niid=False, balance=False, par
         This version in PFLlib is slightly different from the original version 
         Some changes are as follows:
         n_nets -> num_clients, n_class -> num_classes
-        '''
+        '''class_num_per_client
         C = class_per_client
         
         '''The first level: allocate labels to clients
@@ -263,8 +263,9 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
         if num_clients % num_domains == 0:
             num_dclients = [int(num_clients / num_domains) for _ in range(num_domains)]
         else:
-            num_dclients = [int(np.ceil(num_clients / num_domains)) for i in range(num_domains - 1)]
-            num_dclients += [int(num_clients % num_domains)]
+            num_dclients = [int(num_clients // num_domains) for i in range(num_domains)]
+            for i in range(num_clients % num_domains):
+                num_dclients[i] += 1
 
         for i_domain in range(num_domains):
             idxs = np.array(range(len(dataset_label[i_domain])))  # Get indexes of all values in "dataset_label"
@@ -276,15 +277,15 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
             - This num_clients should be (num_dclient = num_clients/num_domains) instead.
             -  
             """
-            class_num_per_client = [class_per_client for _ in range(num_clients)]
+            class_num_per_client = [class_per_client for _ in range(num_dclients[i_domain])]
             for i in range(num_classes):
                 selected_clients = []
-                for client in range(num_clients):
+                for client in range(num_dclients[i_domain]):
                     if class_num_per_client[client] > 0:
                         selected_clients.append(client)
                 if len(selected_clients) == 0:
                     break
-                selected_clients = selected_clients[:int(np.ceil((num_clients / num_classes) * class_per_client))]
+                selected_clients = selected_clients[:int(np.ceil((num_dclients[i_domain] / num_classes) * class_per_client))]
 
                 num_all_samples = len(idx_for_each_class[i])
                 num_selected_clients = len(selected_clients)
