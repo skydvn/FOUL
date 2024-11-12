@@ -237,6 +237,10 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
     y = [[] for _ in range(num_clients)]
     statistic = [[] for _ in range(num_clients)]
 
+    """
+    The "data" has different domains
+    - In the future, it can be looped over domains "d"
+    """
     dataset_content, dataset_label = data
     # guarantee that each client must have at least one batch of data for testing.
     least_samples = int(min(batch_size / (1 - train_ratio), len(dataset_label) / num_clients / 2))
@@ -250,46 +254,53 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
 
     """ IID will do the PAT """
     if partition == 'pat':
-        idxs = np.array(range(len(dataset_label)))
-        idx_for_each_class = []
-        for i in range(num_classes):
-            idx_for_each_class.append(idxs[dataset_label == i])
+        """ 
+        Loop over domains here 
+        1. Assign for every (num_clients/num_domains)*(i_domain-1) to (num_clients/num_domains)*(i_domain) only.
+        2. 
+        """
+        for i_domain in range(num_domains):
+            idxs = np.array(range(len(dataset_label[i_domain])))  # Get indexes of all values in "dataset_label"
+            idx_for_each_class = []
+            for i in range(num_classes):
+                idx_for_each_class.append(idxs[dataset_label[i_domain] == i])
 
-        class_num_per_client = [class_per_client for _ in range(num_clients)]
-        for i in range(num_classes):
-            selected_clients = []
-            for client in range(num_clients):
-                if class_num_per_client[client] > 0:
-                    selected_clients.append(client)
-            if len(selected_clients) == 0:
-                break
-            selected_clients = selected_clients[:int(np.ceil((num_clients / num_classes) * class_per_client))]
+            class_num_per_client = [class_per_client for _ in range(num_clients)]
+            for i in range(num_classes):
+                selected_clients = []
+                for client in range(num_clients):
+                    if class_num_per_client[client] > 0:
+                        selected_clients.append(client)
+                if len(selected_clients) == 0:
+                    break
+                selected_clients = selected_clients[:int(np.ceil((num_clients / num_classes) * class_per_client))]
 
-            num_all_samples = len(idx_for_each_class[i])
-            num_selected_clients = len(selected_clients)
-            num_per = num_all_samples / num_selected_clients
-            if balance:
-                num_samples = [int(num_per) for _ in range(num_selected_clients - 1)]
-            else:
-                num_samples = np.random.randint(max(num_per / 10, least_samples / num_classes), num_per,
-                                                num_selected_clients - 1).tolist()
-            num_samples.append(num_all_samples - sum(num_samples))
-
-            idx = 0
-            for client, num_sample in zip(selected_clients, num_samples):
-                if client not in dataidx_map.keys():
-                    dataidx_map[client] = idx_for_each_class[i][idx:idx + num_sample]
+                num_all_samples = len(idx_for_each_class[i])
+                num_selected_clients = len(selected_clients)
+                num_per = num_all_samples / num_selected_clients
+                if balance:
+                    num_samples = [int(num_per) for _ in range(num_selected_clients - 1)]
                 else:
-                    dataidx_map[client] = np.append(dataidx_map[client], idx_for_each_class[i][idx:idx + num_sample],
-                                                    axis=0)
-                idx += num_sample
-                class_num_per_client[client] -= 1
+                    num_samples = np.random.randint(max(num_per / 10, least_samples / num_classes), num_per,
+                                                    num_selected_clients - 1).tolist()
+                num_samples.append(num_all_samples - sum(num_samples))
+
+                idx = 0
+                for client, num_sample in zip(selected_clients, num_samples):
+                    if client not in dataidx_map.keys():
+                        dataidx_map[client] = idx_for_each_class[i][idx:idx + num_sample]
+                    else:
+                        dataidx_map[client] = np.append(dataidx_map[client], idx_for_each_class[i][idx:idx + num_sample],
+                                                        axis=0)
+                    idx += num_sample
+                    class_num_per_client[client] -= 1
 
 
     elif partition == "dir":
         """ Non-IID and DIR 
         https://github.com/IBM/probabilistic-federated-neural-matching/blob/master/experiment.py
         """
+        """ Loop over domains here """
         min_size = 0
         K = num_classes
         N = len(dataset_label)
@@ -331,6 +342,7 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
         clientidx_map (dict, {label: clientidx}), e.g., C=2, num_clients=5, num_classes=10
             {0: [0, 1], 1: [1, 2], 2: [2, 3], 3: [3, 4], 4: [4, 5], 5: [5, 6], 6: [6, 7], 7: [7, 8], 8: [8, 9], 9: [9, 0]}
         """
+        """ Loop over domains here """
         min_size_per_label = 0
         # You can adjust the `min_require_size_per_label` to meet you requirements
         min_require_size_per_label = max(C * num_clients // num_classes // 2, 1)
