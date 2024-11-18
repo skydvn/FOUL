@@ -64,7 +64,6 @@ def separate_data(data, num_clients, num_classes, niid=False, balance=False, par
         partition = 'pat'
         class_per_client = num_classes
 
-    print(f"partition: {partition}")
     if partition == 'pat':
         idxs = np.array(range(len(dataset_label)))
         idx_for_each_class = []
@@ -222,6 +221,58 @@ def separate_data(data, num_clients, num_classes, niid=False, balance=False, par
     return X, y, statistic
 
 
+def split_data(X, y):
+    # Split dataset
+    train_data, test_data = [], []
+    num_samples = {'train':[], 'test':[]}
+
+    for i in range(len(y)):
+        X_train, X_test, y_train, y_test = train_test_split(
+            X[i], y[i], train_size=train_ratio, shuffle=True)
+
+        train_data.append({'x': X_train, 'y': y_train})
+        num_samples['train'].append(len(y_train))
+        test_data.append({'x': X_test, 'y': y_test})
+        num_samples['test'].append(len(y_test))
+
+    print("Total number of samples:", sum(num_samples['train'] + num_samples['test']))
+    print("The number of train samples:", num_samples['train'])
+    print("The number of test samples:", num_samples['test'])
+    print()
+    del X, y
+    # gc.collect()
+
+    return train_data, test_data
+
+def save_file(config_path, train_path, test_path, train_data, test_data, num_clients, 
+                num_classes, statistic, niid=False, balance=True, partition=None):
+    config = {
+        'num_clients': num_clients, 
+        'num_classes': num_classes, 
+        'non_iid': niid, 
+        'balance': balance, 
+        'partition': partition, 
+        'Size of samples for labels in clients': statistic, 
+        'alpha': alpha, 
+        'batch_size': batch_size, 
+    }
+
+    # gc.collect()
+    print("Saving to disk.\n")
+
+    for idx, train_dict in enumerate(train_data):
+        with open(train_path + str(idx) + '.npz', 'wb') as f:
+            np.savez_compressed(f, data=train_dict)
+    for idx, test_dict in enumerate(test_data):
+        with open(test_path + str(idx) + '.npz', 'wb') as f:
+            np.savez_compressed(f, data=test_dict)
+    with open(config_path, 'w') as f:
+        ujson.dump(config, f)
+
+    print("Finish generating dataset.\n")
+
+
+
 def separate_domain_data(data, num_clients, num_classes, num_domains,
                          niid=False, balance=False, partition=None, class_per_client=None):
 
@@ -261,12 +312,12 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
         2. Assign for every (num_clients/num_domains)*(i_domain-1) to (num_clients/num_domains)*(i_domain) only.
         3. 
         """
-        if num_clients % num_domains == 0:
+        if num_clients % num_domains == 0: ##[5, 5, 5, 5]
             num_dclients = [int(num_clients / num_domains) for _ in range(num_domains)]
         else:
             num_dclients = [int(num_clients // num_domains) for i in range(num_domains)]
-            for i in range(num_clients % num_domains):
-                num_dclients[i] += 1
+            # for i in range(num_clients % num_domains):
+            #     #num_dclients[i] += 1
 
         for i_domain in range(num_domains):
             idxs = np.array(range(len(dataset_label[i_domain])))  # Get indexes of all values in "dataset_label"
@@ -280,6 +331,8 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
             """
             class_num_per_client = [class_per_client for _ in range(num_dclients[i_domain])]
             print(f"len: {len(class_num_per_client)}| {class_num_per_client}")
+            
+
             for i in range(num_classes):
                 selected_clients = []
                 for client in range(num_dclients[i_domain]):
@@ -287,19 +340,28 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
                         selected_clients.append(client) # if client has that class -> assign
                 if len(selected_clients) == 0:
                     break
+
+
                 # Remove clients that does not have that class
                 selected_clients = selected_clients[:int(np.ceil((num_dclients[i_domain] / num_classes) * class_per_client))]
-
+        
+                
+                
                 num_all_samples = len(idx_for_each_class[i])
                 num_selected_clients = len(selected_clients)
-                num_per = num_all_samples / num_selected_clients     # Average number of samples per client
-                if balance:  # Each client has same number of samples
+                num_per = num_all_samples / num_selected_clients     # Average number of samples per client per sample
+                
+                
+                if balance:  # Each client has same number of samples 
                     num_samples = [int(num_per) for _ in range(num_selected_clients - 1)]
                 else:        # Random from range [num_per/10; num_per], with size of num_selected_clients-1
                     num_samples = np.random.randint(max(num_per / 10, least_samples / num_classes), num_per,
                                                     num_selected_clients - 1).tolist()
+                    
+                    
                 num_samples.append(num_all_samples - sum(num_samples))  # last selected_clients
-
+                
+    
                 idx = 0
                 for i_client, num_sample in zip(selected_clients, num_samples):
                     client = i_client + sum(num_dclients[0:i_domain])
@@ -427,16 +489,19 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
 
     else:
         raise NotImplementedError
+    
 
     print(f"label: {len(dataset_label)} | {dataset_label}")
+
     # assign data
     for i_domain in range(num_domains):
-        for client in range(num_dclients[i_domain]):
+        for client in range(num_clients):
             idxs = dataidx_map[client]
-            # print(idxs)
-            """convert here """
-            print(f"domain {i_domain}: || {len(dataset_content[i_domain])} || {idxs}")
-            print(len(dataset_content[i_domain]))
+          
+            if max(idxs) >= len(dataset_content[i_domain]):
+                idxs = np.clip(idxs, 0, len(dataset_content[i_domain]) - 1)
+                
+           
             X[client] = dataset_content[i_domain][idxs]
             y[client] = dataset_label[i_domain][idxs]
 
@@ -444,7 +509,7 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
                 statistic[client].append((int(i), int(sum(y[client] == i))))
 
     del data
-    # gc.collect()
+
 
     for client in range(num_clients):
         print(f"Client {client}\t Size of data: {len(X[client])}\t Labels: ", np.unique(y[client]))
@@ -452,53 +517,3 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
         print("-" * 50)
 
     return X, y, statistic
-
-def split_data(X, y):
-    # Split dataset
-    train_data, test_data = [], []
-    num_samples = {'train':[], 'test':[]}
-
-    for i in range(len(y)):
-        X_train, X_test, y_train, y_test = train_test_split(
-            X[i], y[i], train_size=train_ratio, shuffle=True)
-
-        train_data.append({'x': X_train, 'y': y_train})
-        num_samples['train'].append(len(y_train))
-        test_data.append({'x': X_test, 'y': y_test})
-        num_samples['test'].append(len(y_test))
-
-    print("Total number of samples:", sum(num_samples['train'] + num_samples['test']))
-    print("The number of train samples:", num_samples['train'])
-    print("The number of test samples:", num_samples['test'])
-
-    del X, y
-    # gc.collect()
-
-    return train_data, test_data
-
-def save_file(config_path, train_path, test_path, train_data, test_data, num_clients, 
-                num_classes, statistic, niid=False, balance=True, partition=None):
-    config = {
-        'num_clients': num_clients, 
-        'num_classes': num_classes, 
-        'non_iid': niid, 
-        'balance': balance, 
-        'partition': partition, 
-        'Size of samples for labels in clients': statistic, 
-        'alpha': alpha, 
-        'batch_size': batch_size, 
-    }
-
-    # gc.collect()
-    print("Saving to disk.\n")
-
-    for idx, train_dict in enumerate(train_data):
-        with open(train_path + str(idx) + '.npz', 'wb') as f:
-            np.savez_compressed(f, data=train_dict)
-    for idx, test_dict in enumerate(test_data):
-        with open(test_path + str(idx) + '.npz', 'wb') as f:
-            np.savez_compressed(f, data=test_dict)
-    with open(config_path, 'w') as f:
-        ujson.dump(config, f)
-
-    print("Finish generating dataset.\n")
