@@ -46,7 +46,7 @@ class PACS(Dataset):
 def read_pacs_data(dataset_path, domain_name, split="train"):
     data_paths = []
     data_labels = []
-    split_file = path.join(dataset_path, "splits", "{}_{}_kfold.txt".format(domain_name, split))
+    split_file = path.join(dataset_path, "splits", "{}_{}.txt".format(domain_name, split))
     with open(split_file, "r") as f:
         lines = f.readlines()
         for line in lines:
@@ -130,6 +130,8 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         print(f"domain {id}: {len(dataset_label_d)}")
 
         class_unique.extend(set(dataset_label[id]))
+        
+ 
     num_classes = len(set(class_unique))
     print(f'Number of classes: {num_classes}')
     #
