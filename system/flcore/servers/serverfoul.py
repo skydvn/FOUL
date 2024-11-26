@@ -58,8 +58,6 @@ class FOUL(Server):
         self.device = args.device
         model_origin = copy.deepcopy(args.model)
 
-        self.forget_list = [args.f_index*5 + i for i in range(5)]
-
     def train(self):
         """Fed learning stage"""
         for i in range(self.global_rounds + 1):
@@ -70,7 +68,7 @@ class FOUL(Server):
             if i % self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
                 print("\nEvaluate global model")
-                self.evaluate()
+                self.FUL_evaluate()
 
             for client in self.selected_clients:
                 client.train()

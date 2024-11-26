@@ -87,6 +87,7 @@ class Server(object):
         self.learn_clients_count = args.learn_round
         self.learning_status = args.learn
         #self.learn_clients_precentage = args.learn_client_percentage
+        self.forget_list = [args.f_index*5 + i for i in range(5)]
 
         if self.args.log:
             args.run_name = f"{args.algorithm}__{args.dataset}__{args.num_clients}__{int(time.time())}"
@@ -376,8 +377,79 @@ class Server(object):
         print("Averaged Test Accuracy: {:.4f}".format(test_acc))
         print("Averaged Test AUC: {:.4f}".format(test_auc))
         # self.print_(test_acc, train_acc, train_loss)
-        print("Std Test Accurancy: {:.4f}".format(np.std(accs)))
+        print("Std Test Accuracy: {:.4f}".format(np.std(accs)))
         print("Std Test AUC: {:.4f}".format(np.std(aucs)))
+
+        if self.args.log:
+            self.writer.add_scalar("charts/train_loss", train_loss, self.current_round)
+            wandb.log({"charts/train_loss": train_loss}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_acc", test_acc, self.current_round)
+            wandb.log({"charts/test_acc": test_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc", test_auc, self.current_round)
+            wandb.log({"charts/test_auc": test_auc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_acc_std", test_acc_std, self.current_round)
+            wandb.log({"charts/test_acc_std": test_acc_std}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_std", test_auc_std, self.current_round)
+            wandb.log({"charts/test_auc_std": test_auc_std}, step=self.current_round)
+
+            self.current_round += 1
+
+    def FUL_evaluate(self, acc=None, loss=None):
+        stats = self.test_metrics()
+        stats_train = self.train_metrics()
+
+        test_acc = sum(stats[2]) * 1.0 / sum(stats[1])
+        test_auc = sum(stats[3]) * 1.0 / sum(stats[1])
+        train_loss = sum(stats_train[2]) * 1.0 / sum(stats_train[1])
+        accs = [a / n for a, n in zip(stats[2], stats[1])]
+        aucs = [a / n for a, n in zip(stats[3], stats[1])]
+
+        if acc == None:
+            self.rs_test_acc.append(test_acc)
+        else:
+            acc.append(test_acc)
+
+        if loss == None:
+            self.rs_train_loss.append(train_loss)
+        else:
+            loss.append(train_loss)
+
+        print("Averaged Train Loss: {:.4f}".format(train_loss))
+        print("Averaged Test Accuracy: {:.4f}".format(test_acc))
+        print("Averaged Test AUC: {:.4f}".format(test_auc))
+        # self.print_(test_acc, train_acc, train_loss)
+        print("Std Test Accuracy: {:.4f}".format(np.std(accs)))
+        print("Std Test AUC: {:.4f}".format(np.std(aucs)))
+
+        # Initialize variables to accumulate the total accuracy and number of clients for both groups
+        forget_acc_sum = 0
+        forget_samples_sum = 0
+        retain_acc_sum = 0
+        retain_samples_sum = 0
+
+        # Loop through all clients and separate based on whether their id is in the forget_list
+        for client_id, accuracy, num_samples in zip(stats[0], stats[2], stats[1]):
+            if client_id in self.forget_list:
+                # Sum up accuracy and samples for clients in forget_list
+                forget_acc_sum += accuracy
+                forget_samples_sum += num_samples
+            else:
+                # Sum up accuracy and samples for clients in retain_list
+                retain_acc_sum += accuracy
+                retain_samples_sum += num_samples
+
+        # Calculate the test accuracy for clients in the forget list
+        test_forget_acc = forget_acc_sum / forget_samples_sum if forget_samples_sum != 0 else 0
+
+        # Calculate the test accuracy for clients not in the forget list
+        test_retain_acc = retain_acc_sum / retain_samples_sum if retain_samples_sum != 0 else 0
+
+        print(f"Test Forget Accuracy: {test_forget_acc}")
+        print(f"Test Retain Accuracy: {test_retain_acc}")
 
         if self.args.log:
             self.writer.add_scalar("charts/train_loss", train_loss, self.current_round)
