@@ -402,7 +402,6 @@ def run(args):
 
     reporter.report()
 
-
 if __name__ == "__main__":
     total_start = time.time()
 
@@ -530,10 +529,10 @@ if __name__ == "__main__":
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_id
 
-    # if args.device == "cuda" and not torch.cuda.is_available():
-    #     print("\ncuda is not avaiable.\n")
-    #     args.device = "cpu"
-    args.device = "cpu"
+    if args.device == "cuda" and not torch.cuda.is_available():
+        print("\ncuda is not avaiable.\n")
+        args.device = "cpu"
+    # args.device = "cpu"
 
     print("=" * 50)
     for arg in vars(args):

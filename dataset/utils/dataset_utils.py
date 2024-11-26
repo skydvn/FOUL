@@ -513,7 +513,7 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
 
     for client in range(num_clients):
         print(f"Client {client}\t Size of data: {len(X[client])}\t Labels: ", np.unique(y[client]))
-        print(f"\t\t Samples of labels: ", [i fogit r i in statistic[client]])
+        print(f"\t\t Samples of labels: ", [i for i in statistic[client]])
         print("-" * 50)
 
     return X, y, statistic

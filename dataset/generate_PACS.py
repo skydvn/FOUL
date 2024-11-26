@@ -125,11 +125,14 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         
         dataset_image_d = np.array(dataset_image_d)
         dataset_label_d = np.array(dataset_label_d)
+        dataset_label_d = dataset_label_d - 1
+
         dataset_image.append(dataset_image_d)
         dataset_label.append(dataset_label_d)
         print(f"domain {id}: {len(dataset_label_d)}")
 
         class_unique.extend(set(dataset_label[id]))
+        print(f"unique of domain {id} is: {class_unique}")
         
  
     num_classes = len(set(class_unique))
@@ -139,6 +142,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     #                             niid, balance, partition, class_per_client=2)
     X, y, statistic = separate_domain_data((dataset_image, dataset_label), num_clients, num_classes, 4,
                                             niid, balance, partition, class_per_client=2)
+    print(f"data label: {y}")
 
     train_data, test_data = split_data(X, y)
     save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes,
