@@ -58,6 +58,8 @@ class FOUL(Server):
         self.device = args.device
         model_origin = copy.deepcopy(args.model)
 
+        self.forget_list = [args.f_index*5 + i for i in range(5)]
+
     def train(self):
         """Fed learning stage"""
         for i in range(self.global_rounds + 1):
@@ -191,10 +193,10 @@ class FOUL(Server):
                                  zip(client.parameters(), meta_weights.parameters())]
             client_grad_vector = torch.cat(client_grad).cpu()
             # all_client_grads.append(client_grad_vector)
-            if i_client < 15: # This part should be verified in the future to make it flexible to the data.
-                retain_grads.append(client_grad_vector)
-            else:
+            if i_client in self.forget_list: # This part should be verified in the future to make it flexible to the data.
                 forget_grads.append(client_grad_vector)
+            else:
+                retain_grads.append(client_grad_vector)
         retain_grad_tensor = torch.stack(retain_grads).cpu()
         forget_grad_tensor = torch.stack(forget_grads).cpu()
         # all_domains_grad_tensor = torch.stack(all_client_grads)

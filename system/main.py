@@ -512,7 +512,7 @@ if __name__ == "__main__":
     # FedCAGrad
     parser.add_argument('-car', "--cagrad_rounds", type=int, default=100)
     parser.add_argument('-calr', "--cagrad_learning_rate", type=float, default=25)
-    parser.add_argument('-mmt', "--momentum", type=float, default=0.5)
+    parser.add_argument('-mmt', "--momentum", type=floaretain_grad_vect, default=0.5)
     parser.add_argument('-ss', "--step_size", type=int, default=30)
     parser.add_argument('-gam', "--gamma", type=float, default=0.5)
     parser.add_argument('-c', "--c_parameter", type=float, default=0.5)
@@ -522,7 +522,8 @@ if __name__ == "__main__":
     parser.add_argument('-learn','--learn', type=str, default="learn", help='Learn or Unlearn '
                                             'should be mentioned here by default will learn')
     parser.add_argument('-learn_round', "--learn_round", type=int, default=50,help="Number of clients we want to do learn")
-    parser.add_argument('-learn_percentage', "--learn_percentage", type=int, default=50,help="Number of clients we want to do learn")
+    # parser.add_argument('-learn_percentage', "--learn_percentage", type=int, default=50,help="Number of clients we want to do learn")
+    parser.add_argument('-f_index', "--f_index", type=int, default=3,help="Index of forget set")
 
 
     args = parser.parse_args()

@@ -161,6 +161,7 @@ cython_debug/
 
 # extra dir
 PACS/
+PACS2/
 VLCS/
 office_home/
 conversion/download
