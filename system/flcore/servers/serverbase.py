@@ -88,6 +88,25 @@ class Server(object):
         self.learning_status = args.learn
         #self.learn_clients_precentage = args.learn_client_percentage
 
+        if self.args.log:
+            args.run_name = f"{args.algorithm}__{args.dataset}__{args.num_clients}__{int(time.time())}"
+
+            self.current_round = 0
+            self.save_dir = f"runs/{args.run_name}"
+            self.writer = SummaryWriter(self.save_dir)
+            self.writer.add_text(
+                "hyperparameters",
+                "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+            )
+
+            wandb.init(
+                project="FederatedUnlearning",
+                entity="senurahansaja",
+                config=args,
+                name=args.run_name,
+                force=True
+            )
+
     def set_clients(self, clientObj):
         """This is function which set each client and assign data to them """
         for i, train_slow, send_slow in zip(range(self.num_clients), self.train_slow_clients, self.send_slow_clients):
@@ -354,11 +373,29 @@ class Server(object):
             loss.append(train_loss)
 
         print("Averaged Train Loss: {:.4f}".format(train_loss))
-        print("Averaged Test Accurancy: {:.4f}".format(test_acc))
+        print("Averaged Test Accuracy: {:.4f}".format(test_acc))
         print("Averaged Test AUC: {:.4f}".format(test_auc))
         # self.print_(test_acc, train_acc, train_loss)
         print("Std Test Accurancy: {:.4f}".format(np.std(accs)))
         print("Std Test AUC: {:.4f}".format(np.std(aucs)))
+
+        if self.args.log:
+            self.writer.add_scalar("charts/train_loss", train_loss, self.current_round)
+            wandb.log({"charts/train_loss": train_loss}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_acc", test_acc, self.current_round)
+            wandb.log({"charts/test_acc": test_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc", test_auc, self.current_round)
+            wandb.log({"charts/test_auc": test_auc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_acc_std", test_acc_std, self.current_round)
+            wandb.log({"charts/test_acc_std": test_acc_std}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_std", test_auc_std, self.current_round)
+            wandb.log({"charts/test_auc_std": test_auc_std}, step=self.current_round)
+
+            self.current_round += 1
 
     def print_(self, test_acc, test_auc, train_loss):
         print("Average Test Accurancy: {:.4f}".format(test_acc))
