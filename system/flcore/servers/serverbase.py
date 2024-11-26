@@ -86,7 +86,8 @@ class Server(object):
         ##unlearning part
         self.learn_clients_count = args.learn_round
         self.learning_status = args.learn
-        #self.learn_clients_precentage = args.learn_client_percentage
+        #self.learn_clients_precentage = args.learn_client_percentage        self.forget_list = [args.f_index*5 + i for i in range(5)]
+
         self.forget_list = [args.f_index*5 + i for i in range(5)]
 
         if self.args.log:
@@ -418,6 +419,7 @@ class Server(object):
         else:
             loss.append(train_loss)
 
+        test_auc_std = np.std(accs)
         print("Averaged Train Loss: {:.4f}".format(train_loss))
         print("Averaged Test Accuracy: {:.4f}".format(test_acc))
         print("Averaged Test AUC: {:.4f}".format(test_auc))
@@ -428,33 +430,43 @@ class Server(object):
         # Initialize variables to accumulate the total accuracy and number of clients for both groups
         forget_acc_sum = 0
         forget_samples_sum = 0
+        forget_auc_sum = 0
         retain_acc_sum = 0
         retain_samples_sum = 0
+        retain_auc_sum = 0
 
         # Loop through all clients and separate based on whether their id is in the forget_list
-        for client_id, accuracy, num_samples in zip(stats[0], stats[2], stats[1]):
+        for client_id, accuracy, auc, num_samples in zip(stats[0], stats[2], stats[3], stats[1]):
             if client_id in self.forget_list:
                 # Sum up accuracy and samples for clients in forget_list
                 forget_acc_sum += accuracy
+                forget_auc_sum += auc
                 forget_samples_sum += num_samples
             else:
                 # Sum up accuracy and samples for clients in retain_list
                 retain_acc_sum += accuracy
+                retain_auc_sum += auc
                 retain_samples_sum += num_samples
 
         # Calculate the test accuracy for clients in the forget list
         test_forget_acc = forget_acc_sum / forget_samples_sum if forget_samples_sum != 0 else 0
+        test_forget_auc = forget_auc_sum / forget_samples_sum if forget_samples_sum != 0 else 0
 
         # Calculate the test accuracy for clients not in the forget list
         test_retain_acc = retain_acc_sum / retain_samples_sum if retain_samples_sum != 0 else 0
+        test_retain_auc = retain_auc_sum / retain_samples_sum if retain_samples_sum != 0 else 0
 
         print(f"Test Forget Accuracy: {test_forget_acc}")
         print(f"Test Retain Accuracy: {test_retain_acc}")
+
+        test_acc_std = np.std(accs).item()
+        test_auc_std = np.std(aucs).item()
 
         if self.args.log:
             self.writer.add_scalar("charts/train_loss", train_loss, self.current_round)
             wandb.log({"charts/train_loss": train_loss}, step=self.current_round)
 
+            # Test Accuracy
             self.writer.add_scalar("charts/test_acc", test_acc, self.current_round)
             wandb.log({"charts/test_acc": test_acc}, step=self.current_round)
 
@@ -466,6 +478,21 @@ class Server(object):
 
             self.writer.add_scalar("charts/test_auc_std", test_auc_std, self.current_round)
             wandb.log({"charts/test_auc_std": test_auc_std}, step=self.current_round)
+
+            # Test Retain Accuracy
+            self.writer.add_scalar("charts/test_acc_r", test_retain_acc, self.current_round)
+            wandb.log({"charts/test_acc_r": test_retain_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_r", test_retain_auc, self.current_round)
+            wandb.log({"charts/test_auc_r": test_retain_auc}, step=self.current_round)
+
+            # Test Forget Accuracy
+            self.writer.add_scalar("charts/test_acc_f", test_forget_acc, self.current_round)
+            wandb.log({"charts/test_acc_f": test_forget_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_f", test_forget_auc, self.current_round)
+            wandb.log({"charts/test_auc_f": test_forget_auc}, step=self.current_round)
+
 
             self.current_round += 1
 
