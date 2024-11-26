@@ -163,6 +163,7 @@ cython_debug/
 PACS/
 PACS2/
 PACS3/
+Temp/
 VLCS/
 office_home/
 conversion/download
