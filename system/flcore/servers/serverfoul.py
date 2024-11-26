@@ -119,7 +119,7 @@ class FOUL(Server):
         """
         ### Fed Client wise forgetting stage
         print("Fed unlearning stage")
-        for i in range(self.global_rounds + 1):
+        for i in range(self.unlearn_round + 1):
             s_t = time.time()
             self.selected_clients, self.current_learn = self.unlearn_select_clients()
             self.send_models()
