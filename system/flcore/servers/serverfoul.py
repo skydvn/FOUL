@@ -59,7 +59,7 @@ class FOUL(Server):
         model_origin = copy.deepcopy(args.model)
 
     def train(self):
-        """Fed learning stage"""
+        print("Fed learning stage")
         for i in range(self.global_rounds + 1):
             s_t = time.time()
             self.selected_clients = self.select_clients()
@@ -118,6 +118,7 @@ class FOUL(Server):
                 client.unlearn()
         """
         ### Fed Client wise forgetting stage
+        print("Fed unlearning stage")
         for i in range(self.global_rounds + 1):
             s_t = time.time()
             self.selected_clients, self.current_learn = self.unlearn_select_clients()
@@ -136,7 +137,7 @@ class FOUL(Server):
             # [t.start() for t in threads]
             # [t.join() for t in threads]
 
-            self.receive_models()senurahansaja
+            self.receive_models()
             # self.receive_grads()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)

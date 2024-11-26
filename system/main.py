@@ -358,7 +358,7 @@ def run(args):
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedDBE(args, i)
 
-        elif args.algorithm == 'FedCAC':
+        elif args.algorithm == 'Feglobal_roundsdCAC':
             server = FedCAC(args, i)
 
         elif args.algorithm == 'PFL-DA':
@@ -421,7 +421,7 @@ if __name__ == "__main__":
                         help="Local learning rate")
     parser.add_argument('-ld', "--learning_rate_decay", type=bool, default=False)
     parser.add_argument('-ldg', "--learning_rate_decay_gamma", type=float, default=0.99)
-    parser.add_argument('-gr', "--global_rounds", type=int, default=2000)
+    parser.add_argument('-gr', "--global_rounds", type=int, default=500)
     parser.add_argument('-ls', "--local_epochs", type=int, default=1, 
                         help="Multiple update steps in one local epoch.")
     parser.add_argument('-algo', "--algorithm", type=str, default="FedAvg")
@@ -476,7 +476,7 @@ if __name__ == "__main__":
                         help="The iterations for solving quadratic subproblems")
     # FedAMP
     parser.add_argument('-alk', "--alphaK", type=float, default=1.0, 
-                        help="lambda/sqrt(GLOABL-ITRATION) according to the paper")
+                        help="lambda/sqrt(GLOABL-ITetain_grad_vecRATION) according to the paper")
     parser.add_argument('-sg', "--sigma", type=float, default=1.0)
     # APFL
     parser.add_argument('-al', "--alpha", type=float, default=1.0)
@@ -512,7 +512,7 @@ if __name__ == "__main__":
     # FedCAGrad
     parser.add_argument('-car', "--cagrad_rounds", type=int, default=100)
     parser.add_argument('-calr', "--cagrad_learning_rate", type=float, default=25)
-    parser.add_argument('-mmt', "--momentum", type=floaretain_grad_vect, default=0.5)
+    parser.add_argument('-mmt', "--momentum", type=float, default=0.5)
     parser.add_argument('-ss', "--step_size", type=int, default=30)
     parser.add_argument('-gam', "--gamma", type=float, default=0.5)
     parser.add_argument('-c', "--c_parameter", type=float, default=0.5)
