@@ -82,7 +82,7 @@ class FOUL(Server):
             self.receive_models()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
-            old_model = self.global_models
+            old_model = self.global_model
             self.aggregate_parameters()
 
             """
@@ -161,7 +161,8 @@ class FOUL(Server):
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
 
-            # self.aggregate_parameters()
+            old_model = self.global_model
+            # self.aggregate_parameters(
             # self.aggregate_foul()
             meta_weights = self.aggregate_foul(
                 meta_weights=self.global_model,
@@ -187,7 +188,7 @@ class FOUL(Server):
 
             print(r_angle_dict)
             print(f_angle_dict)
-            
+
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
 
