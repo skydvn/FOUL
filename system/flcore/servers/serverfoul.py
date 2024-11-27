@@ -82,7 +82,15 @@ class FOUL(Server):
             self.receive_models()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
+            old_model = self.global_models
             self.aggregate_parameters()
+
+            """
+            Metrics of gradient angles here
+            - Cosines between (gradients of retain set) vs. (aggregated gradient) 
+            """
+            for client in self.selected_clients:
+                self.cos_sim(old_model, self.global_model, client.model)
 
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
@@ -154,6 +162,11 @@ class FOUL(Server):
             )
             self.global_model.load_state_dict(copy.deepcopy(meta_weights))
             # self.network.reset_weights(meta_weights)
+
+            """
+            Metrics of gradient angles here
+            - Cosines between (gradients of retain set) vs. (aggregated gradient) 
+            """
 
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
