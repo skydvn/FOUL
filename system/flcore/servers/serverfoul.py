@@ -89,8 +89,17 @@ class FOUL(Server):
             Metrics of gradient angles here
             - Cosines between (gradients of retain set) vs. (aggregated gradient) 
             """
+            r_angle_dict = {}
+            f_angle_dict = {}
             for client in self.selected_clients:
-                self.cos_sim(old_model, self.global_model, client.model)
+                cos = self.cos_sim(old_model, self.global_model, client.model)
+                if client.id in self.forget_list:
+                    f_angle_dict[f"{client.id}"] = cos
+                else:
+                    r_angle_dict[f"{client.id}"] = cos
+
+            print(r_angle_dict)
+            print(f_angle_dict)
 
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
@@ -167,7 +176,18 @@ class FOUL(Server):
             Metrics of gradient angles here
             - Cosines between (gradients of retain set) vs. (aggregated gradient) 
             """
+            r_angle_dict = {}
+            f_angle_dict = {}
+            for client in self.selected_clients:
+                cos = self.cos_sim(old_model, self.global_model, client.model)
+                if client.id in self.forget_list:
+                    f_angle_dict[f"{client.id}"] = cos
+                else:
+                    r_angle_dict[f"{client.id}"] = cos
 
+            print(r_angle_dict)
+            print(f_angle_dict)
+            
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
 
