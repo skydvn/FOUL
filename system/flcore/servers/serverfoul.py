@@ -59,8 +59,9 @@ class FOUL(Server):
         model_origin = copy.deepcopy(args.model)
 
     def train(self):
-        print("Fed learning stage")
-        for i in range(self.global_rounds + 1):
+        print("\n======================================")
+        print("\nFED Learning Stage")
+        for i in range(self.learn_round + 1):
             s_t = time.time()
             self.selected_clients = self.select_clients()
             self.send_models()
@@ -118,7 +119,8 @@ class FOUL(Server):
                 client.unlearn()
         """
         ### Fed Client wise forgetting stage
-        print("Fed unlearning stage")
+        print("\n======================================")
+        print("\nFED Unlearning Stage")
         for i in range(self.unlearn_round + 1):
             s_t = time.time()
             self.selected_clients, self.current_learn = self.unlearn_select_clients()
@@ -127,7 +129,7 @@ class FOUL(Server):
             if i % self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
                 print("\nEvaluate global model")
-                self.evaluate()
+                self.FUL_evaluate()
 
             for client in self.selected_clients:
                 client.train()
