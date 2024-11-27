@@ -91,7 +91,6 @@ class FOUL(Server):
             r_angle_dict = {}
             f_angle_dict = {}
             for client in self.selected_clients:
-                print(self.global_model)
                 cos = self.cos_sim(old_model, self.global_model, client.model)
                 if client.id in self.forget_list:
                     f_angle_dict[f"{client.id}"] = cos
@@ -180,7 +179,7 @@ class FOUL(Server):
             """
             r_angle_dict = {}
             f_angle_dict = {}
-            print(self.forget_list)
+            # print(self.forget_list)
             for client in self.selected_clients:
                 cos = self.cos_sim(old_model, self.global_model, client.model)
                 if client.id in self.forget_list:
@@ -297,10 +296,13 @@ class FOUL(Server):
             w_opt.zero_grad()
             ww = torch.softmax(w, 0)
             """ Minimization objective function """
+
             obj = (
                    (ww[0:r_dim].t().mm(Ggr) - ww[r_dim:r_dim+f_dim].t().mm(Ggf))
-                   + c * (ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
-                          - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim]) + 1e-4).sqrt()
+                   + c * (torch.abs(
+                            ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
+                          - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim])
+                          )+ 1e-4).sqrt()
                   )
 
             if obj.item() < obj_best:
@@ -311,8 +313,8 @@ class FOUL(Server):
                 w_opt.step()
 
         ww = torch.softmax(w_best, 0)
-        gw_norm = (ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
-                          - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim]) + 1e-4).sqrt()
+        gw_norm = (torch.abs(ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
+                          - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim])) + 1e-4).sqrt()
 
         lmbda = c.view(-1) / (gw_norm+1e-4)
 
