@@ -631,15 +631,15 @@ class Server(object):
 
         grad1 = params1 - prev_param
         grad2 = params2 - prev_param
-        print(f"g1:{torch.norm(grad1)}|g2:{torch.norm(grad2)}")
+        # print(f"g1:{torch.norm(grad1)}|g2:{torch.norm(grad2)}")
 
         cos_sim = torch.dot(grad1, grad2) / (torch.norm(grad1) * torch.norm(grad2))
-        if torch.isnan(cos_sim):
-            print("cos_sim is NaN.")
-            print("value of params1", params1)
-            # print("value of params2", params)
-            print("Value of grad1:", grad1)
-            print("Value of grad2:", grad2)
+        # if torch.isnan(cos_sim):
+        #     print("cos_sim is NaN.")
+        #     print("value of params1", params1)
+        #     # print("value of params2", params)
+        #     print("Value of grad1:", grad1)
+        #     print("Value of grad2:", grad2)
         return cos_sim.item()
 
     def cosine_similarity(self, model1, model2):
