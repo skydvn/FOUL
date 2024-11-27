@@ -56,7 +56,6 @@ class FOUL(Server):
         self.meta_lr = args.meta_lr
         self.gamma = args.gamma
         self.device = args.device
-        model_origin = copy.deepcopy(args.model)
 
     def train(self):
         print("\n======================================")
@@ -82,7 +81,7 @@ class FOUL(Server):
             self.receive_models()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
-            old_model = self.global_model
+            old_model = copy.deepcopy(self.global_model)
             self.aggregate_parameters()
 
             """
@@ -92,6 +91,7 @@ class FOUL(Server):
             r_angle_dict = {}
             f_angle_dict = {}
             for client in self.selected_clients:
+                print(self.global_model)
                 cos = self.cos_sim(old_model, self.global_model, client.model)
                 if client.id in self.forget_list:
                     f_angle_dict[f"{client.id}"] = cos
@@ -161,7 +161,8 @@ class FOUL(Server):
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
 
-            old_model = self.global_model
+            old_model = copy.deepcopy(self.global_model)
+
             # self.aggregate_parameters(
             # self.aggregate_foul()
             meta_weights = self.aggregate_foul(
@@ -179,6 +180,7 @@ class FOUL(Server):
             """
             r_angle_dict = {}
             f_angle_dict = {}
+            print(self.forget_list)
             for client in self.selected_clients:
                 cos = self.cos_sim(old_model, self.global_model, client.model)
                 if client.id in self.forget_list:

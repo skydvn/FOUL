@@ -129,7 +129,7 @@ class Server(object):
     #     will be set as learn clients, and the rest will be treated as unlearn clients.
     #     """
     #     for i in range(self.num_clients):
-    #         # iterate through learn part
+    #         # iterate through learn partold_model
     #         is_learn_client = i < self.learn_clients_count
 
     #         # Assign data to the clients
@@ -425,7 +425,6 @@ class Server(object):
         print("Averaged Train Loss: {:.4f}".format(train_loss))
         print("Averaged Test Accuracy: {:.4f}".format(test_acc))
         print("Averaged Test AUC: {:.4f}".format(test_auc))
-        # self.print_(test_acc, train_acc, train_loss)
         print("Std Test Accuracy: {:.4f}".format(np.std(accs)))
         print("Std Test AUC: {:.4f}".format(np.std(aucs)))
 
@@ -554,7 +553,7 @@ class Server(object):
 
             d = DLG(client_model, origin_grad, target_inputs)
             if d is not None:
-                psnr_val += d
+                psnr_val += dold_model
                 cnt += 1
 
             # items.append((client_model, origin_grad, target_inputs))
@@ -629,23 +628,18 @@ class Server(object):
         prev_param = torch.cat([p.data.view(-1) for p in prev_model.parameters()])
         params1 = torch.cat([p.data.view(-1) for p in model1.parameters()])
         params2 = torch.cat([p.data.view(-1) for p in model2.parameters()])
-        # print(f"prev:{prev_param[0]}")
-        # print(f"p1:{params1[0]}")
-        # print(f"p2:{params2[0]}")
 
         grad1 = params1 - prev_param
-        grad2 = params2
-        # print(f"prev:{torch.norm(prev_param)}|p1:{torch.norm(params1)}|p2:{torch.norm(params2)}")
-        # print(f"g1:{torch.norm(grad1)}|g2:{torch.norm(grad2)}")
-        # print(torch.dot(grad1, grad2))
-        # print((torch.norm(grad1) * torch.norm(grad2)))
+        grad2 = params2 - prev_param
+        print(f"g1:{torch.norm(grad1)}|g2:{torch.norm(grad2)}")
+
         cos_sim = torch.dot(grad1, grad2) / (torch.norm(grad1) * torch.norm(grad2))
-        # if torch.isnan(cos_sim):
-        #     print("cos_sim is NaN.")
-        #     print("value of params1", params1)
-        #     # print("value of params2", params)
-        #     print("Value of grad1:", grad1)
-        #     print("Value of grad2:", grad2)
+        if torch.isnan(cos_sim):
+            print("cos_sim is NaN.")
+            print("value of params1", params1)
+            # print("value of params2", params)
+            print("Value of grad1:", grad1)
+            print("Value of grad2:", grad2)
         return cos_sim.item()
 
     def cosine_similarity(self, model1, model2):
