@@ -82,13 +82,13 @@ class Server(object):
         self.new_clients = []
         self.eval_new_clients = False
         self.fine_tuning_epoch_new = args.fine_tuning_epoch_new
-        
+
         ##unlearning part
         self.learn_clients_count = args.learn_round
         self.learning_status = args.learn
-        #self.learn_clients_precentage = args.learn_client_percentage        self.forget_list = [args.f_index*5 + i for i in range(5)]
+        # self.learn_clients_precentage = args.learn_client_percentage        self.forget_list = [args.f_index*5 + i for i in range(5)]
 
-        self.forget_list = [args.f_index*5 + i for i in range(5)]
+        self.forget_list = [args.f_index * 5 + i for i in range(5)]
 
         if self.args.log:
             args.run_name = f"{args.algorithm}__{args.dataset}__{args.num_clients}__{int(time.time())}"
@@ -114,24 +114,24 @@ class Server(object):
         for i, train_slow, send_slow in zip(range(self.num_clients), self.train_slow_clients, self.send_slow_clients):
             train_data = read_client_data(self.dataset, i, is_train=True)
             test_data = read_client_data(self.dataset, i, is_train=False)
-            client = clientObj(self.args, 
-                            id=i, 
-                            train_samples=len(train_data), 
-                            test_samples=len(test_data), 
-                            train_slow=train_slow, 
-                            send_slow=send_slow)
+            client = clientObj(self.args,
+                               id=i,
+                               train_samples=len(train_data),
+                               test_samples=len(test_data),
+                               train_slow=train_slow,
+                               send_slow=send_slow)
             self.clients.append(client)
-            
-    # def set_unlearn_clients(self, clientObj):  ## i think this will be redundant 
+
+    # def set_unlearn_clients(self, clientObj):  ## i think this will be redundant
     #     """
-    #     This method sets the initial clients to be active learning clients, 
+    #     This method sets the initial clients to be active learning clients,
     #     and the rest to be unlearn clients. The first 'learn_clients_count' clients
     #     will be set as learn clients, and the rest will be treated as unlearn clients.
     #     """
     #     for i in range(self.num_clients):
     #         # iterate through learn part
     #         is_learn_client = i < self.learn_clients_count
-            
+
     #         # Assign data to the clients
     #         train_data = read_client_data(self.dataset, i, is_train=True)
     #         test_data = read_client_data(self.dataset, i, is_train=False)
@@ -143,14 +143,12 @@ class Server(object):
     #             test_samples=len(test_data),
     #             train_slow=False,  # these were set to false becauase we dont care about them at this moment
     #             send_slow=False,
-    #             is_learn_client=is_learn_client 
+    #             is_learn_client=is_learn_client
     #         )
     #         self.clients.append(client)
-            
+
     #         print(f"Total clients set: {self.num_clients}, Learn clients: {self.learn_clients_count}, Unlearn clients: {self.num_clients - self.learn_clients_count}")
-        
-            
-            
+
     # random select slow clients
     def select_slow_clients(self, slow_rate):
         slow_clients = [False for i in range(self.num_clients)]
@@ -169,19 +167,19 @@ class Server(object):
 
     def select_clients(self):
         if self.random_join_ratio:
-            self.current_num_join_clients = np.random.choice(range(self.num_join_clients, self.num_clients+1), 1, replace=False)[0]
+            self.current_num_join_clients = \
+            np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]
         else:
             self.current_num_join_clients = self.num_join_clients
         selected_clients = list(np.random.choice(self.clients, self.current_num_join_clients, replace=False))
 
         return selected_clients
 
-
     def unlearn_select_clients(self):
         if self.learning_status:
             if self.random_join_ratio:
                 self.current_num_join_clients = \
-                np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]
+                    np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]
                 self.current_unlearn = self.current_num_join_clients // 4
                 self.current_learn = self.current_num_join_clients - self.current_unlearn
             else:
@@ -189,8 +187,12 @@ class Server(object):
                 self.current_unlearn = self.current_num_join_clients // 4
                 self.current_learn = self.current_num_join_clients - self.current_unlearn
 
-            learn_selected_clients = list(np.random.choice(self.clients[0:self.num_clients -self.num_clients // 4], self.current_learn, replace=False))
-            unlearn_selected_clients = list(np.random.choice(self.clients[self.num_clients - self.num_clients // 4: self.num_clients], self.current_unlearn, replace=False))
+            learn_selected_clients = list(
+                np.random.choice(self.clients[0:self.num_clients - self.num_clients // 4], self.current_learn,
+                                 replace=False))
+            unlearn_selected_clients = list(
+                np.random.choice(self.clients[self.num_clients - self.num_clients // 4: self.num_clients],
+                                 self.current_unlearn, replace=False))
             # print(f"learn:{learn_selected_clients}")
             # print(f"unlearn:{unlearn_selected_clients}")
             selected_clients = learn_selected_clients + unlearn_selected_clients
@@ -213,7 +215,7 @@ class Server(object):
 
         for client in self.clients:
             start_time = time.time()
-            
+
             client.set_parameters(self.global_model)
 
             client.send_time_cost['num_rounds'] += 1
@@ -223,7 +225,7 @@ class Server(object):
         assert (len(self.selected_clients) > 0)
 
         active_clients = random.sample(
-            self.selected_clients, int((1-self.client_drop_rate) * self.current_num_join_clients))
+            self.selected_clients, int((1 - self.client_drop_rate) * self.current_num_join_clients))
 
         self.uploaded_ids = []
         self.uploaded_weights = []
@@ -232,7 +234,7 @@ class Server(object):
         for client in active_clients:
             try:
                 client_time_cost = client.train_time_cost['total_cost'] / client.train_time_cost['num_rounds'] + \
-                        client.send_time_cost['total_cost'] / client.send_time_cost['num_rounds']
+                                   client.send_time_cost['total_cost'] / client.send_time_cost['num_rounds']
             except ZeroDivisionError:
                 client_time_cost = 0
             if client_time_cost <= self.time_threthold:
@@ -270,7 +272,7 @@ class Server(object):
         self.global_model = copy.deepcopy(self.uploaded_models[0])
         for param in self.global_model.parameters():
             param.data.zero_()
-            
+
         for w, client_model in zip(self.uploaded_weights, self.uploaded_models):
             self.add_parameters(w, client_model)
 
@@ -295,7 +297,7 @@ class Server(object):
         model_path = os.path.join("models", self.dataset)
         model_path = os.path.join(model_path, self.algorithm + "_server" + ".pt")
         return os.path.exists(model_path)
-        
+
     def save_results(self):
         algo = self.dataset + "_" + self.algorithm
         result_path = "../results/"
@@ -324,14 +326,14 @@ class Server(object):
         if self.eval_new_clients and self.num_new_clients > 0:
             self.fine_tuning_new_clients()
             return self.test_metrics_new_clients()
-        
+
         num_samples = []
         tot_correct = []
         tot_auc = []
         for c in self.clients:
             ct, ns, auc = c.test_metrics()
-            tot_correct.append(ct*1.0)
-            tot_auc.append(auc*ns)
+            tot_correct.append(ct * 1.0)
+            tot_auc.append(auc * ns)
             num_samples.append(ns)
 
         ids = [c.id for c in self.clients]
@@ -341,13 +343,13 @@ class Server(object):
     def train_metrics(self):
         if self.eval_new_clients and self.num_new_clients > 0:
             return [0], [1], [0]
-        
+
         num_samples = []
         losses = []
         for c in self.clients:
             cl, ns = c.train_metrics()
             num_samples.append(ns)
-            losses.append(cl*1.0)
+            losses.append(cl * 1.0)
 
         ids = [c.id for c in self.clients]
 
@@ -358,17 +360,17 @@ class Server(object):
         stats = self.test_metrics()
         stats_train = self.train_metrics()
 
-        test_acc = sum(stats[2])*1.0 / sum(stats[1])
-        test_auc = sum(stats[3])*1.0 / sum(stats[1])
-        train_loss = sum(stats_train[2])*1.0 / sum(stats_train[1])
+        test_acc = sum(stats[2]) * 1.0 / sum(stats[1])
+        test_auc = sum(stats[3]) * 1.0 / sum(stats[1])
+        train_loss = sum(stats_train[2]) * 1.0 / sum(stats_train[1])
         accs = [a / n for a, n in zip(stats[2], stats[1])]
         aucs = [a / n for a, n in zip(stats[3], stats[1])]
-        
+
         if acc == None:
             self.rs_test_acc.append(test_acc)
         else:
             acc.append(test_acc)
-        
+
         if loss == None:
             self.rs_train_loss.append(train_loss)
         else:
@@ -493,7 +495,6 @@ class Server(object):
             self.writer.add_scalar("charts/test_auc_f", test_forget_auc, self.current_round)
             wandb.log({"charts/test_auc_f": test_forget_auc}, step=self.current_round)
 
-
             self.current_round += 1
 
     def print_(self, test_acc, test_auc, train_loss):
@@ -555,9 +556,9 @@ class Server(object):
             if d is not None:
                 psnr_val += d
                 cnt += 1
-            
+
             # items.append((client_model, origin_grad, target_inputs))
-                
+
         if cnt > 0:
             print('PSNR value is {:.2f} dB'.format(psnr_val / cnt))
         else:
@@ -569,12 +570,12 @@ class Server(object):
         for i in range(self.num_clients, self.num_clients + self.num_new_clients):
             train_data = read_client_data(self.dataset, i, is_train=True)
             test_data = read_client_data(self.dataset, i, is_train=False)
-            client = clientObj(self.args, 
-                            id=i, 
-                            train_samples=len(train_data), 
-                            test_samples=len(test_data), 
-                            train_slow=False, 
-                            send_slow=False)
+            client = clientObj(self.args,
+                               id=i,
+                               train_samples=len(train_data),
+                               test_samples=len(test_data),
+                               train_slow=False,
+                               send_slow=False)
             self.new_clients.append(client)
 
     # fine-tuning on new clients
@@ -605,8 +606,8 @@ class Server(object):
         tot_auc = []
         for c in self.new_clients:
             ct, ns, auc = c.test_metrics()
-            tot_correct.append(ct*1.0)
-            tot_auc.append(auc*ns)
+            tot_correct.append(ct * 1.0)
+            tot_auc.append(auc * ns)
             num_samples.append(ns)
 
         ids = [c.id for c in self.new_clients]
