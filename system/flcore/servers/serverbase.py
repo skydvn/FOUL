@@ -436,6 +436,10 @@ class Server(object):
         retain_samples_sum = 0
         retain_auc_sum = 0
 
+        r_acc_dict = {}
+        f_acc_dict = {}
+        r_auc_dict = {}
+        f_auc_dict = {}
         # Loop through all clients and separate based on whether their id is in the forget_list
         for client_id, accuracy, auc, num_samples in zip(stats[0], stats[2], stats[3], stats[1]):
             if client_id in self.forget_list:
@@ -443,11 +447,15 @@ class Server(object):
                 forget_acc_sum += accuracy
                 forget_auc_sum += auc
                 forget_samples_sum += num_samples
+                r_acc_dict[f"{client_id}"] = accuracy/num_samples
+                r_auc_dict[f"{client_id}"] = auc/num_samples
             else:
                 # Sum up accuracy and samples for clients in retain_list
                 retain_acc_sum += accuracy
                 retain_auc_sum += auc
                 retain_samples_sum += num_samples
+                f_acc_dict[f"{client_id}"] = accuracy/num_samples
+                f_auc_dict[f"{client_id}"] = auc/num_samples
 
         # Calculate the test accuracy for clients in the forget list
         test_forget_acc = forget_acc_sum / forget_samples_sum if forget_samples_sum != 0 else 0
@@ -459,6 +467,12 @@ class Server(object):
 
         print(f"Test Forget Accuracy: {test_forget_acc}")
         print(f"Test Retain Accuracy: {test_retain_acc}")
+        print(f"======= Client Acc =======")
+        print(r_acc_dict)
+        print(f_acc_dict)
+        print(f"======= Client AUC =======")
+        print(r_auc_dict)
+        print(f_auc_dict)
 
         test_acc_std = np.std(accs).item()
         test_auc_std = np.std(aucs).item()
