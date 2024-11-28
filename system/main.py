@@ -527,6 +527,9 @@ if __name__ == "__main__":
     parser.add_argument('-f_index', "--f_index", type=int, default=3, help="Index of forget set")
     parser.add_argument('-log', "--log", action='store_true')
 
+    ### FOUL
+    parser.add_argument('-beta_foul', "--beta_foul", type=float, default=2.0)
+
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_id

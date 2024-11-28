@@ -55,6 +55,7 @@ class FOUL(Server):
         self.step_size = args.step_size
         self.meta_lr = args.meta_lr
         self.gamma = args.gamma
+        self.beta = args.beta_foul
         self.device = args.device
 
     def train(self):
@@ -257,6 +258,7 @@ class FOUL(Server):
         === === === === === === === ===
         The optimization is applied on CPU to save the GPU utilization.
         """
+
         r_grads = retain_grad_vec
         f_grads = forget_grad_vec
 
@@ -298,10 +300,11 @@ class FOUL(Server):
             """ Minimization objective function """
 
             obj = (
-                   (ww[0:r_dim].t().mm(Ggr) - ww[r_dim:r_dim+f_dim].t().mm(Ggf))
+                   (ww[0:r_dim].t().mm(Ggr)
+                    - self.beta * ww[r_dim:r_dim+f_dim].t().mm(Ggf))
                    + c * (torch.abs(
                             ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
-                          - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim])
+                          - self.beta * ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim])
                           )+ 1e-4).sqrt()
                   )
 
@@ -314,13 +317,13 @@ class FOUL(Server):
 
         ww = torch.softmax(w_best, 0)
         gw_norm = (torch.abs(ww[0:r_dim].t().mm(GGr).mm(ww[0:r_dim])
-                          - ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim])) + 1e-4).sqrt()
+                          - self.beta * ww[r_dim:r_dim+f_dim].t().mm(GGf).mm(ww[r_dim:r_dim+f_dim])) + 1e-4).sqrt()
 
         lmbda = c.view(-1) / (gw_norm+1e-4)
 
         g = (torch.cat((r_grads.cpu(),f_grads.cpu()), dim=0).mean(0)).view(-1, 1)
-        g += lmbda * ((r_grads.cpu() * ww[0:r_dim]).sum(0) -
-                      (f_grads.cpu() * ww[r_dim:r_dim+f_dim]).sum(0)
+        g += lmbda * ((r_grads.cpu() * ww[0:r_dim]).sum(0)
+                      - self.beta * (f_grads.cpu() * ww[r_dim:r_dim+f_dim]).sum(0)
                       ).view(-1, 1)
         g /= (1 + self.foul_c ** 2)
 
