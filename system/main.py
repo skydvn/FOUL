@@ -501,7 +501,7 @@ if __name__ == "__main__":
     parser.add_argument('-et', "--eta", type=float, default=1.0)
     parser.add_argument('-s', "--rand_percent", type=int, default=80)
     parser.add_argument('-p', "--layer_idx", type=int, default=2,
-                        help="More fine-graind t)han its original paper.")
+                        help="More fine-grained than its original paper.")
     # FedKD
     parser.add_argument('-mlr', "--mentee_learning_rate", type=float, default=0.005)
     parser.add_argument('-Ts', "--T_start", type=float, default=0.95)
@@ -519,8 +519,8 @@ if __name__ == "__main__":
     parser.add_argument('-foulmlr', "--meta_lr", type=float, default=0.5)
 
     ### unlearning arguments to be mentioned here
-    parser.add_argument('-learn', '--learn', type=str, default="learn", help='Learn or Unlearn '
-                                                                             'should be mentioned here by default will learn')
+    parser.add_argument('-learn', '--learn', type=str, default="learn", help='Learn or Unlearn should be '
+                                                                             'mentioned here by default will learn')
     parser.add_argument('-learn_round', "--learn_round", type=int, default=50,
                         help="Number of clients we want to do learn")
     # parser.add_argument('-learn_percentage', "--learn_percentage", type=int, default=50,help="Number of clients we want to do learn")

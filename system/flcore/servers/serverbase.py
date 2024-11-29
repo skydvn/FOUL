@@ -93,7 +93,8 @@ class Server(object):
         self.forget_list = [args.f_index * 5 + i for i in range(5)]
 
         if self.args.log:
-            args.run_name = f"{args.algorithm}__{args.dataset}__{args.num_clients}__{int(time.time())}"
+            args.run_name = (f"{args.algorithm}__{args.dataset}__{args.num_clients}__"
+                             f"{args.local_epochs}__{args.beta_foul}__{int(time.time())}")
 
             self.current_round = -1
             self.save_dir = f"runs/{args.run_name}"
@@ -480,8 +481,8 @@ class Server(object):
                 self.writer.add_scalar("client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
                 wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
                 # Client Accuracy Gain
-                self.writer.add_scalar("client-charts/client{client_id}_auc", acc_progress/num_samples, self.current_round)
-                wandb.log({"client-charts/client{client_id}_auc": acc_progress/num_samples}, step=self.current_round)
+                self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
+                wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
 
 
         # Calculate the test accuracy for clients in the forget list
