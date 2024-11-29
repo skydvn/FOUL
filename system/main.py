@@ -175,6 +175,11 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FOUL(args, i)
+        elif args.algorithm == 'Retrain':
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = Retrain(args, i)
         else:
             raise NotImplementedError
 
