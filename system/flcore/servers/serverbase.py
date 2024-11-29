@@ -95,7 +95,7 @@ class Server(object):
         if self.args.log:
             args.run_name = f"{args.algorithm}__{args.dataset}__{args.num_clients}__{int(time.time())}"
 
-            self.current_round = 0
+            self.current_round = -1
             self.save_dir = f"runs/{args.run_name}"
             self.writer = SummaryWriter(self.save_dir)
             self.writer.add_text(
@@ -407,6 +407,10 @@ class Server(object):
             self.current_round += 1
 
     def FUL_evaluate(self, acc=None, loss=None):
+        if self.args.log:
+            self.current_round += 1
+
+        """ Start """
         stats = self.test_metrics()
         stats_train = self.train_metrics()
 
@@ -534,8 +538,6 @@ class Server(object):
 
             self.writer.add_scalar("charts/test_auc_f", test_forget_auc, self.current_round)
             wandb.log({"charts/test_auc_f": test_forget_auc}, step=self.current_round)
-
-            self.current_round += 1
 
     def print_(self, test_acc, test_auc, train_loss):
         print("Average Test Accurancy: {:.4f}".format(test_acc))

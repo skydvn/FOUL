@@ -193,10 +193,10 @@ class FOUL(Server):
                 cos = self.cos_sim(old_model, self.global_model, client.model)
                 if client.id in self.forget_list:
                     f_angle_dict[f"{client.id}"] = cos
-                    f_angle_dict = {k: f_angle_dict[k] for k in sorted(f_angle_dict, reverse=True)}
                 else:
                     r_angle_dict[f"{client.id}"] = cos
-                    r_angle_dict = {k: r_angle_dict[k] for k in sorted(r_angle_dict, reverse=True)}
+                self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
+                wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
 
             print(f"======= Client Angle =======")
             print(r_angle_dict)
