@@ -105,7 +105,6 @@ class Server(object):
             )
 
             wandb.login(key="d9e66bc555aea6e4a53302cd44fe432d61ec9c1b", force=True)
-            args.run_name = f"{args.dataset}_{args.algorithm}"
 
             self.__run = wandb.init(
                 project="FOUL",
@@ -462,12 +461,13 @@ class Server(object):
                 forget_samples_sum += num_samples
                 r_acc_dict[f"{client_id}"] = accuracy/num_samples
                 r_auc_dict[f"{client_id}"] = auc/num_samples
-                # Client Accuracy
-                self.writer.add_scalar("client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
-                wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
-                # Client Accuracy Gain
-                self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
-                wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
+                if self.args.log:
+                    # Client Accuracy
+                    self.writer.add_scalar(f"client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
+                    # Client Accuracy Gain
+                    self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
             else:
                 # Sum up accuracy and samples for clients in retain_list
                 retain_acc_sum += accuracy
@@ -477,12 +477,13 @@ class Server(object):
                 f_auc_dict[f"{client_id}"] = auc/num_samples
                 acc_progress = accuracy - last_acc
                 last_acc = accuracy
+                if self.args.log:
                 # Client Accuracy
-                self.writer.add_scalar("client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
-                wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
-                # Client Accuracy Gain
-                self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
-                wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
+                    self.writer.add_scalar(f"client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
+                    # Client Accuracy Gain
+                    self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
 
 
         # Calculate the test accuracy for clients in the forget list

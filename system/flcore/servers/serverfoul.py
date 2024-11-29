@@ -100,8 +100,9 @@ class FOUL(Server):
                     f_angle_dict[f"{client.id}"] = cos
                 else:
                     r_angle_dict[f"{client.id}"] = cos
-                self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
-                wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
+                if self.args.log:
+                    self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
+                    wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
 
             print(f"======= Client Angle =======")
             f_angle_dict = {k: f_angle_dict[k] for k in sorted(f_angle_dict, reverse=True)}
@@ -195,8 +196,9 @@ class FOUL(Server):
                     f_angle_dict[f"{client.id}"] = cos
                 else:
                     r_angle_dict[f"{client.id}"] = cos
-                self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
-                wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
+                if self.args.log:
+                    self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
+                    wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
 
             print(f"======= Client Angle =======")
             print(r_angle_dict)
