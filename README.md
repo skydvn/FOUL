@@ -16,3 +16,15 @@ python main.py --learn False --learn_count 50
 ```
 python main.py --learn unlearn --learn_count 50 --algo FOUL 
 ```
+
+## Exact Unlearning Algorithms
+
+### Naive Retraining
+```
+python main.py --learn joint -gr 150 --learn_round 100 --algo Retrain --local_epochs 2 -lbs 32 --log
+```
+
+### FOUL Algorithms
+```
+python main.py --learn joint -gr 150 --learn_round 100 --algo FOUL --local_epochs 2 -lbs 32 --beta_foul 3.5 --log
+```
