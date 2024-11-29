@@ -149,7 +149,7 @@ class FOUL(Server):
         print("\nFED Unlearning Stage")
         for i in range(self.unlearn_round + 1):
             s_t = time.time()
-            self.selected_clients = self.selected_clients()
+            self.selected_clients = self.select_clients()
             self.send_models()
 
             if i % self.eval_gap == 0:

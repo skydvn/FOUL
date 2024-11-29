@@ -91,7 +91,7 @@ class Server(object):
         # self.learn_clients_precentage = args.learn_client_percentage        self.forget_list = [args.f_index*5 + i for i in range(5)]
 
         self.forget_list = [args.f_index * 5 + i for i in range(5)]
-        self.last_acc = [0 for _ in range(len(stats[0]))]
+        self.last_acc = [0 for _ in range(self.num_clients)]
 
         if self.args.log:
             args.run_name = (f"{args.algorithm}__{args.dataset}__{args.num_clients}__"
@@ -105,7 +105,7 @@ class Server(object):
                 "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
             )
 
-            wandb.login(key="d9e66bc555aea6e4a53302cd44fe432d61ec9c1b", force=True)
+            wandb.login(key="8923eb30938bc12331e4b4ff0f34193282742f4e", force=True)
 
             self.__run = wandb.init(
                 project="FOUL",
@@ -186,24 +186,17 @@ class Server(object):
             if self.random_join_ratio:
                 self.current_num_join_clients = \
                     np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]
-                self.current_unlearn = self.current_num_join_clients // 4
-                self.current_learn = self.current_num_join_clients - self.current_unlearn
             else:
                 self.current_num_join_clients = self.num_join_clients
-                self.current_unlearn = self.current_num_join_clients // 4
-                self.current_learn = self.current_num_join_clients - self.current_unlearn
 
-            learn_selected_clients = list(
-                np.random.choice(self.clients[0:self.num_clients - self.num_clients // 4], self.current_learn,
-                                 replace=False))
-            unlearn_selected_clients = list(
-                np.random.choice(self.clients[self.num_clients - self.num_clients // 4: self.num_clients],
-                                 self.current_unlearn, replace=False))
+            retain_clients = self.clients
+            selected_clients = list(np.random.choice(self.clients, self.current_num_join_clients, replace=False))
+
             # print(f"learn:{learn_selected_clients}")
             # print(f"unlearn:{unlearn_selected_clients}")
             selected_clients = learn_selected_clients + unlearn_selected_clients
             # print(f"all:{selected_clients}")
-            return selected_clients, self.current_learn
+            return selected_clients
         else:
             """
             The process is like this 

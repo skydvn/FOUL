@@ -28,6 +28,7 @@ import logging
 
 from flcore.servers.serveravg import FedAvg
 from flcore.servers.serverfoul import FOUL
+from flcore.servers.serverretrain import Retrain
 
 from flcore.trainmodel.models import *
 
@@ -185,11 +186,14 @@ def run(args):
 
         """ Start of the learn/unlearn process"""
         if args.learn == "learn":
+            print("Learn")
             server.train()  ##
         elif args.learn == "unlearn":
             # Load models first
+            print("Unlearn")
             server.unlearn()  ## if unlearning
         else:
+            print("Joint Learn + Unlearn")
             server.train()
             server.unlearn()
 
@@ -288,7 +292,8 @@ if __name__ == "__main__":
     parser.add_argument('-tau', "--tau", type=float, default=1.0)
     # FedBABU
     parser.add_argument('-fte', "--fine_tuning_epochs", type=int, default=10)
-    # APPLE
+    # APPLE    self.selected_clients = self.selected_clients()
+
     parser.add_argument('-dlr', "--dr_learning_rate", type=float, default=0.0)
     parser.add_argument('-L', "--L", type=float, default=1.0)
     # FedGen

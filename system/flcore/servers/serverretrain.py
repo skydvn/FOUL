@@ -15,10 +15,15 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import copy
+import numpy as np
+import statistics
 import time
 from flcore.clients.clientretrain import clientRetrain
 from flcore.servers.serverbase import Server
 from threading import Thread
+import wandb
+from torch.utils.tensorboard import SummaryWriter
 
 
 class Retrain(Server):
@@ -27,7 +32,7 @@ class Retrain(Server):
 
         # select slow clients
         self.set_slow_clients()
-        self.set_clients(clientAVG)
+        self.set_clients(clientRetrain)
 
         print(f"\nJoin ratio / total clients: {self.join_ratio} / {self.num_clients}")
         print("Finished creating server and clients.")
@@ -103,7 +108,7 @@ class Retrain(Server):
 
         if self.num_new_clients > 0:
             self.eval_new_clients = True
-            self.set_new_clients(clientAVG)
+            self.set_new_clients(clientRetrain)
             print(f"\n-------------Fine tuning round-------------")
             print("\nEvaluate new clients")
             self.evaluate()
@@ -122,7 +127,7 @@ class Retrain(Server):
         print("\nFED Unlearning Stage")
         for i in range(self.global_rounds + 1):
             s_t = time.time()
-            self.selected_clients, self.current_learn = self.unlearn_select_clients()
+            self.selected_clients = self.unlearn_select_clients()
             self.send_models()
 
             if i % self.eval_gap == 0:
@@ -184,7 +189,7 @@ class Retrain(Server):
 
         if self.num_new_clients > 0:
             self.eval_new_clients = True
-            self.set_new_clients(clientAVG)
+            self.set_new_clients(clientRetrain)
             print(f"\n-------------Fine tuning round-------------")
             print("\nEvaluate new clients")
             self.evaluate()
