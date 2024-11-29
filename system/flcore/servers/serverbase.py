@@ -91,6 +91,7 @@ class Server(object):
         # self.learn_clients_precentage = args.learn_client_percentage        self.forget_list = [args.f_index*5 + i for i in range(5)]
 
         self.forget_list = [args.f_index * 5 + i for i in range(5)]
+        self.last_acc = [0 for _ in range(len(stats[0]))]
 
         if self.args.log:
             args.run_name = (f"{args.algorithm}__{args.dataset}__{args.num_clients}__"
@@ -450,14 +451,14 @@ class Server(object):
         r_auc_dict = {}
         f_auc_dict = {}
         # Loop through all clients and separate based on whether their id is in the forget_list
-        last_acc = 0
+
         for client_id, accuracy, auc, num_samples in zip(stats[0], stats[2], stats[3], stats[1]):
             if client_id in self.forget_list:
                 # Sum up accuracy and samples for clients in forget_list
                 forget_acc_sum += accuracy
                 forget_auc_sum += auc
-                acc_progress = accuracy - last_acc
-                last_acc = accuracy
+                acc_progress = accuracy - self.last_acc[client_id]
+                self.last_acc[client_id] = accuracy
                 forget_samples_sum += num_samples
                 r_acc_dict[f"{client_id}"] = accuracy/num_samples
                 r_auc_dict[f"{client_id}"] = auc/num_samples
@@ -475,8 +476,8 @@ class Server(object):
                 retain_samples_sum += num_samples
                 f_acc_dict[f"{client_id}"] = accuracy/num_samples
                 f_auc_dict[f"{client_id}"] = auc/num_samples
-                acc_progress = accuracy - last_acc
-                last_acc = accuracy
+                acc_progress = accuracy - self.last_acc[client_id]
+                self.last_acc[client_id] = accuracy
                 if self.args.log:
                 # Client Accuracy
                     self.writer.add_scalar(f"client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)

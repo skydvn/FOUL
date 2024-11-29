@@ -37,6 +37,8 @@ class Retrain(Server):
 
     def train(self):
         """Fed learning stage"""
+        print("\n======================================")
+        print("\nFED Learning Stage")
         for i in range(self.global_rounds + 1):
             s_t = time.time()
             self.selected_clients = self.select_clients()
@@ -45,7 +47,7 @@ class Retrain(Server):
             if i % self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
                 print("\nEvaluate global model")
-                self.evaluate()
+                self.FUL_evaluate()
 
             for client in self.selected_clients:
                 client.train()
@@ -55,10 +57,33 @@ class Retrain(Server):
             # [t.start() for t in threads]
             # [t.join() for t in threads]
 
+            old_model = copy.deepcopy(self.global_model)
+
             self.receive_models()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
             self.aggregate_parameters()
+
+            """
+            Metrics of gradient angles here
+            - Cosines between (gradients of retain set) vs. (aggregated gradient) 
+            """
+            r_angle_dict = {}
+            f_angle_dict = {}
+            # print(self.forget_list)
+            for client in self.selected_clients:
+                cos = self.cos_sim(old_model, self.global_model, client.model)
+                if client.id in self.forget_list:
+                    f_angle_dict[f"{client.id}"] = cos
+                else:
+                    r_angle_dict[f"{client.id}"] = cos
+                if self.args.log:
+                    self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
+                    wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
+
+            print(f"======= Client Angle =======")
+            print(r_angle_dict)
+            print(f_angle_dict)
 
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
@@ -93,6 +118,8 @@ class Retrain(Server):
                 client.unlearn()
         """
         ### Fed Client wise forgetting stage
+        print("\n======================================")
+        print("\nFED Unlearning Stage")
         for i in range(self.global_rounds + 1):
             s_t = time.time()
             self.selected_clients, self.current_learn = self.unlearn_select_clients()
@@ -101,7 +128,7 @@ class Retrain(Server):
             if i % self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
                 print("\nEvaluate global model")
-                self.evaluate()
+                self.FUL_evaluate()
 
             for client in self.selected_clients:
                 client.train()
@@ -111,10 +138,33 @@ class Retrain(Server):
             # [t.start() for t in threads]
             # [t.join() for t in threads]
 
+            copy.deepcopy(self.global_model)
+
             self.receive_models()
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
             self.aggregate_parameters()
+
+            """
+            Metrics of gradient angles here
+            - Cosines between (gradients of retain set) vs. (aggregated gradient) 
+            """
+            r_angle_dict = {}
+            f_angle_dict = {}
+            # print(self.forget_list)
+            for client in self.selected_clients:
+                cos = self.cos_sim(old_model, self.global_model, client.model)
+                if client.id in self.forget_list:
+                    f_angle_dict[f"{client.id}"] = cos
+                else:
+                    r_angle_dict[f"{client.id}"] = cos
+                if self.args.log:
+                    self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
+                    wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
+
+            print(f"======= Client Angle =======")
+            print(r_angle_dict)
+            print(f_angle_dict)
 
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])

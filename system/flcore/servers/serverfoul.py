@@ -269,7 +269,8 @@ class FOUL(Server):
         retain_grad_vec <torch tensor>: [num_retain_clients, dim] // CUDA:0
         forget_grad_vec <torch tensor>: [num_forget_clients, dim] // CUDA:0
         === === === === === === === ===
-        The optimization is applied on CPU to save the GPU utilization.
+        The optimization is applied on CPU to save the GPU utilization.            print(f"current learn: {self.current_learn}")
+
         """
 
         r_grads = retain_grad_vec
