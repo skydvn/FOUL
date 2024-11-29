@@ -25,6 +25,8 @@ import random
 from utils.data_utils import read_client_data
 from utils.dlg import DLG
 
+from torch.utils.tensorboard import SummaryWriter
+import wandb
 
 class Server(object):
     def __init__(self, args, times):
@@ -101,8 +103,11 @@ class Server(object):
                 "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
             )
 
-            wandb.init(
-                project="FederatedUnlearning",
+            wandb.login(key="d9e66bc555aea6e4a53302cd44fe432d61ec9c1b", force=True)
+            args.run_name = f"{args.dataset}_{args.algorithm}"
+
+            self.__run = wandb.init(
+                project="FOUL",
                 entity="senurahansaja",
                 config=args,
                 name=args.run_name,
@@ -441,14 +446,23 @@ class Server(object):
         r_auc_dict = {}
         f_auc_dict = {}
         # Loop through all clients and separate based on whether their id is in the forget_list
+        last_acc = 0
         for client_id, accuracy, auc, num_samples in zip(stats[0], stats[2], stats[3], stats[1]):
             if client_id in self.forget_list:
                 # Sum up accuracy and samples for clients in forget_list
                 forget_acc_sum += accuracy
                 forget_auc_sum += auc
+                acc_progress = accuracy - last_acc
+                last_acc = accuracy
                 forget_samples_sum += num_samples
                 r_acc_dict[f"{client_id}"] = accuracy/num_samples
                 r_auc_dict[f"{client_id}"] = auc/num_samples
+                # Client Accuracy
+                self.writer.add_scalar("client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
+                wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
+                # Client Accuracy Gain
+                self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
+                wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
             else:
                 # Sum up accuracy and samples for clients in retain_list
                 retain_acc_sum += accuracy
@@ -456,6 +470,15 @@ class Server(object):
                 retain_samples_sum += num_samples
                 f_acc_dict[f"{client_id}"] = accuracy/num_samples
                 f_auc_dict[f"{client_id}"] = auc/num_samples
+                acc_progress = accuracy - last_acc
+                last_acc = accuracy
+                # Client Accuracy
+                self.writer.add_scalar("client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
+                wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
+                # Client Accuracy Gain
+                self.writer.add_scalar("client-charts/client{client_id}_auc", acc_progress/num_samples, self.current_round)
+                wandb.log({"client-charts/client{client_id}_auc": acc_progress/num_samples}, step=self.current_round)
+
 
         # Calculate the test accuracy for clients in the forget list
         test_forget_acc = forget_acc_sum / forget_samples_sum if forget_samples_sum != 0 else 0
@@ -468,9 +491,13 @@ class Server(object):
         print(f"Test Forget Accuracy: {test_forget_acc}")
         print(f"Test Retain Accuracy: {test_retain_acc}")
         print(f"======= Client Acc =======")
+        r_acc_dict = {k: r_acc_dict[k] for k in sorted(r_acc_dict, reverse=True)}
+        f_acc_dict = {k: f_acc_dict[k] for k in sorted(f_acc_dict, reverse=True)}
         print(r_acc_dict)
         print(f_acc_dict)
         print(f"======= Client AUC =======")
+        r_auc_dict = {k: r_auc_dict[k] for k in sorted(r_auc_dict, reverse=True)}
+        f_auc_dict = {k: f_auc_dict[k] for k in sorted(f_auc_dict, reverse=True)}
         print(r_auc_dict)
         print(f_auc_dict)
 

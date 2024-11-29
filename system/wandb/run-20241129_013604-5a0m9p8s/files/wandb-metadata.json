@@ -1,0 +1,224 @@
+{
+    "os": "Linux-6.8.0-49-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "heartbeatAt": "2024-11-28T16:36:05.722061",
+    "startedAt": "2024-11-28T16:36:04.568329",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "--learn",
+        "joint",
+        "-gr",
+        "150",
+        "--learn_round",
+        "100",
+        "--algo",
+        "FOUL",
+        "--local_epochs",
+        "2",
+        "-lbs",
+        "32",
+        "--beta_foul",
+        "3.5",
+        "--log"
+    ],
+    "state": "running",
+    "program": "/home/skydvn/Documents/git/MachineUnlearning/FOUL/system/main.py",
+    "codePathLocal": "main.py",
+    "codePath": "system/main.py",
+    "git": {
+        "remote": "https://github.com/skydvn/FOUL/",
+        "commit": "8a9552f4fdbf9af14853f325a99604b36372b4db"
+    },
+    "email": "mduongbkhn@gmail.com",
+    "root": "/home/skydvn/Documents/git/MachineUnlearning/FOUL",
+    "host": "Skyd",
+    "username": "skydvn",
+    "executable": "/home/skydvn/Documents/git/.denv/bin/python",
+    "cpu_count": 24,
+    "cpu_count_logical": 32,
+    "cpu_freq": {
+        "current": 2418.2194687500005,
+        "min": 800.0,
+        "max": 4575.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 800.193,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 801.368,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 5100.0,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 800.403,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 3695.808,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 5065.874,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 5067.5,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 5067.502,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 5100.0,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 5061.023,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 5073.18,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 4798.318,
+            "min": 800.0,
+            "max": 5200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 801.265,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 914.41,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 799.953,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 1788.381,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 803.859,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 804.647,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 3900.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 937.3305015563965,
+            "used": 756.9479904174805
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4070 Laptop GPU",
+            "memory_total": 8585740288
+        }
+    ],
+    "memory": {
+        "total": 15.35589599609375
+    }
+}
