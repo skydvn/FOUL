@@ -125,6 +125,7 @@ class Retrain(Server):
         ### Fed Client wise forgetting stage
         print("\n======================================")
         print("\nFED Unlearning Stage")
+        self.global_model = copy.deepcopy(args.model)
         for i in range(self.global_rounds + 1):
             s_t = time.time()
             self.selected_clients = self.unlearn_select_clients()
