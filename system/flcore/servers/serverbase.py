@@ -89,7 +89,6 @@ class Server(object):
         self.learn_clients_count = args.learn_round
         self.learning_status = args.learn
         # self.learn_clients_precentage = args.learn_client_percentage        self.forget_list = [args.f_index*5 + i for i in range(5)]
-
         self.forget_list = [args.f_index * 5 + i for i in range(5)]
         self.last_acc = [0 for _ in range(self.num_clients)]
 
@@ -149,7 +148,7 @@ class Server(object):
     #             test_samples=len(test_data),
     #             train_slow=False,  # these were set to false becauase we dont care about them at this moment
     #             send_slow=False,
-    #             is_learn_client=is_learn_client
+    #             is_learn_client=is_learn_clientself.global_model = copy.deepcopy(args.model)
     #         )
     #         self.clients.append(client)
 
