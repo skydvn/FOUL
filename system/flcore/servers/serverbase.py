@@ -40,6 +40,7 @@ class Server(object):
         self.batch_size = args.batch_size
         self.learning_rate = args.local_learning_rate
         self.global_model = copy.deepcopy(args.model)
+        self.init_model = copy.deepcopy(args.model)
         self.num_clients = args.num_clients
         self.join_ratio = args.join_ratio
         self.random_join_ratio = args.random_join_ratio
@@ -182,18 +183,22 @@ class Server(object):
 
     def unlearn_select_clients(self):
         if self.learning_status:
+            retain_clients = [self.clients[i] for i in range(len(self.clients)) if
+                              i not in self.forget_list]  # Exclude these indices
+            # print(f"{len(retain_clients)} {self.current_num_join_clients}")
+            num_joint_retain = self.num_join_clients if self.num_join_clients < len(retain_clients) \
+                                                     else len(retain_clients)
+            print(num_joint_retain)
             if self.random_join_ratio:
                 self.current_num_join_clients = \
-                    np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]
+                    np.random.choice(range(num_joint_retain, self.num_clients + 1), 1, replace=False)[0]
             else:
-                self.current_num_join_clients = self.num_join_clients
+                self.current_num_join_clients = num_joint_retain
 
-            retain_clients = self.clients
-            selected_clients = list(np.random.choice(self.clients, self.current_num_join_clients, replace=False))
+            selected_clients = list(np.random.choice(retain_clients, self.current_num_join_clients, replace=False))
 
             # print(f"learn:{learn_selected_clients}")
             # print(f"unlearn:{unlearn_selected_clients}")
-            selected_clients = learn_selected_clients + unlearn_selected_clients
             # print(f"all:{selected_clients}")
             return selected_clients
         else:
