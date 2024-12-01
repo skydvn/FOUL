@@ -7,6 +7,9 @@ For PACS, where data spans multiple domains, we allocate clients based on domain
 ```
 python generate_PACS1.py iid balance -
 ```
+
+## Exact Unlearning Algorithms
+
 To Run FedAvg Algorithm:
 ```
 cd system/
