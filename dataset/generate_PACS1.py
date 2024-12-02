@@ -96,11 +96,11 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     domains = ['art_painting', 'cartoon', 'photo', 'sketch']
 
     # Get PACS data
-    if not os.path.exists(root):
-        os.makedirs(root)
-        os.system(f'cd {root}')
-        os.system(f'git clone https://github.com/MachineLearning2020/Homework3-PACS.git')
-        # os.system(f'mv PACS/ ../')
+    # if not os.path.exists(root):
+    #     os.makedirs(root)
+    #     os.system(f'cd {root}')
+    #     os.system(f'git clone https://github.com/MachineLearning2020/Homework3-PACS.git')
+    #     # os.system(f'mv PACS/ ../')
 
     ## the data_loader will split into test and train sets
     X, y = [], []
