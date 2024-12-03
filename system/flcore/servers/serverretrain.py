@@ -128,7 +128,7 @@ class Retrain(Server):
         self.global_model = copy.deepcopy(self.init_model)
         for i in range(self.global_rounds + 1):
             s_t = time.time()
-            self.selected_clients = self.unlearn_select_clients()
+            self.selected_clients, self.unselected_clients = self.unlearn_select_clients()
             self.send_models()
 
             if i % self.eval_gap == 0:
@@ -160,6 +160,19 @@ class Retrain(Server):
             # print(self.forget_list)
             for client in self.selected_clients:
                 cos = self.cos_sim(old_model, self.global_model, client.model)
+                if client.id in self.forget_list:
+                    f_angle_dict[f"{client.id}"] = cos
+                else:
+                    r_angle_dict[f"{client.id}"] = cos
+                if self.args.log:
+                    self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
+                    wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
+
+\
+            for client in self.unselected_clients:
+                client_clone = copy.deepcopy(client)
+                client_clone.train()
+                cos = self.cos_sim(old_model, self.global_model, client_clone.model)
                 if client.id in self.forget_list:
                     f_angle_dict[f"{client.id}"] = cos
                 else:

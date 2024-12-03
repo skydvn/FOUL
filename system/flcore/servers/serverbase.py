@@ -182,36 +182,29 @@ class Server(object):
         return selected_clients
 
     def unlearn_select_clients(self):
-        if self.learning_status:
-            retain_clients = [self.clients[i] for i in range(len(self.clients)) if
-                              i not in self.forget_list]  # Exclude these indices
-            # print(f"{len(retain_clients)} {self.current_num_join_clients}")
-            num_joint_retain = self.num_join_clients if self.num_join_clients < len(retain_clients) \
-                                                     else len(retain_clients)
-            print(num_joint_retain)
-            if self.random_join_ratio:
-                self.current_num_join_clients = \
-                    np.random.choice(range(num_joint_retain, self.num_clients + 1), 1, replace=False)[0]
-            else:
-                self.current_num_join_clients = num_joint_retain
+        retain_clients = [self.clients[i] for i in range(len(self.clients)) if
+                          i not in self.forget_list]  # Exclude these indices
+        forget_clients = [self.clients[i] for i in range(len(self.clients)) if
+                          i in self.forget_list]  # Exclude these indices
 
-            selected_clients = list(np.random.choice(retain_clients, self.current_num_join_clients, replace=False))
-
-            # print(f"learn:{learn_selected_clients}")
-            # print(f"unlearn:{unlearn_selected_clients}")
-            # print(f"all:{selected_clients}")
-            return selected_clients
+        # print(f"{len(retain_clients)} {self.current_num_join_clients}")
+        num_joint_retain = self.num_join_clients if self.num_join_clients < len(retain_clients) \
+                                                 else len(retain_clients)
+        print(f"{num_joint_retain}-{len(forget_clients)}")
+        if self.random_join_ratio:
+            self.current_num_join_clients = \
+                np.random.choice(range(num_joint_retain, self.num_clients + 1), 1, replace=False)[0]
         else:
-            """
-            The process is like this 
+            self.current_num_join_clients = num_joint_retain
 
-            """
-            ## as per the last meeting we set first 50 learning and make the rest of the client unlearning
-            selected_clients = [i for i in
-                                range(self.learn_clients_count)]  ## fixed amount of clients used for learning
-            # selected_clients = [i for i in range(int(self.learn_clients_percentage *  self.num_clients))] ## percentage of clients to unlearn
+        selected_clients = list(np.random.choice(retain_clients, self.current_num_join_clients, replace=False))
+        unselected_clients = list(np.random.choice(forget_clients, len(forget_clients), replace=False))
 
-            return selected_clients
+        # print(f"learn:{learn_selected_clients}")
+        # print(f"unlearn:{unlearn_selected_clients}")
+        # print(f"all:{selected_clients}")
+        return selected_clients, unselected_clients
+
 
     def send_models(self):
         assert (len(self.clients) > 0)
