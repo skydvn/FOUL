@@ -144,6 +144,10 @@ class FOUL(Server):
                                                 ##  need to specify right ??????
                 client.unlearn()
         """
+        ### Init Everything
+        for client in self.clients:
+            client.re_init()
+
         ### Fed Client wise forgetting stage
         print("\n======================================")
         print("\nFED Unlearning Stage")

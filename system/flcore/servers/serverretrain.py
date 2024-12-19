@@ -122,6 +122,10 @@ class Retrain(Server):
         for client in self.selected_clients:    ## (Question) in the unlearn function we need to set the clients to unlearn ---> but when it comes to client unlearn what data we need to specify right ??????
                 client.unlearn()
         """
+        ### Init Everything
+        for client in self.clients:
+            client.re_init()
+
         ### Fed Client wise forgetting stage
         print("\n======================================")
         print("\nFED Unlearning Stage")
