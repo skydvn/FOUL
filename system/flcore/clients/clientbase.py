@@ -67,7 +67,7 @@ class Client(object):
         )
         self.learning_rate_decay = args.learning_rate_decay
 
-    def re_init(self):
+    def re_init(self, args):
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         self.learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer=self.optimizer,

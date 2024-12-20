@@ -146,7 +146,7 @@ class FOUL(Server):
         """
         ### Init Everything
         for client in self.clients:
-            client.re_init()
+            client.re_init(self.args)
 
         ### Fed Client wise forgetting stage
         print("\n======================================")
