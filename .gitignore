@@ -169,5 +169,6 @@ VLCS/
 wandb/
 office_home/
 runs/
+results/
 conversion/download
 conversion/export
