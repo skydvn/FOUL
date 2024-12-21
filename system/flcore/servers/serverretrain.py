@@ -37,6 +37,9 @@ class Retrain(Server):
         print(f"\nJoin ratio / total clients: {self.join_ratio} / {self.num_clients}")
         print("Finished creating server and clients.")
 
+        """ Learn-Unlearn Round Split """
+        self.learn_round = args.learn_round
+        self.unlearn_round = args.global_rounds - self.learn_round
         # self.load_model()
         self.Budget = []
 
@@ -44,7 +47,7 @@ class Retrain(Server):
         """Fed learning stage"""
         print("\n======================================")
         print("\nFED Learning Stage")
-        for i in range(self.global_rounds + 1):
+        for i in range(self.learn_round + 1):
             s_t = time.time()
             self.selected_clients = self.select_clients()
             self.send_models()
@@ -124,13 +127,13 @@ class Retrain(Server):
         """
         ### Init Everything
         for client in self.clients:
-            client.re_init()
+            client.re_init(self.args)
 
         ### Fed Client wise forgetting stage
         print("\n======================================")
         print("\nFED Unlearning Stage")
         self.global_model = copy.deepcopy(self.init_model)
-        for i in range(self.global_rounds + 1):
+        for i in range(self.unlearn_round + 1):
             s_t = time.time()
             self.selected_clients, self.unselected_clients = self.unlearn_select_clients()
             self.send_models()
