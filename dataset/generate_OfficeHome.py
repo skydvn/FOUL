@@ -169,7 +169,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         os.system(f'unzip OfficeHome.tar.gz -d {root}')
     
     
-    domains = ['artistic', 'product', 'real_World', 'clipart']
+    domains = ['Art', 'Product', 'Real World', 'Clipart']
     
     
     X, y = [], []
