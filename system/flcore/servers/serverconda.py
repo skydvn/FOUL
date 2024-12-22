@@ -108,7 +108,7 @@ class CONDA(Server):
             if i % self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
                 print("\nEvaluate global model")
-                self.evaluate()
+                self.FUL_evaluate()
 
             for client in self.selected_clients:
                 client.train()
@@ -167,7 +167,7 @@ class CONDA(Server):
             self.set_new_clients(clientAVG)
             print(f"\n-------------Fine tuning round-------------")
             print("\nEvaluate new clients")
-            self.evaluate()
+            self.FUL_evaluate()
 
     def compute_conda_ratio(self, all_gradients, forget_gradients):
         """Compute the ratio of gradient norms for CONDA dampening"""

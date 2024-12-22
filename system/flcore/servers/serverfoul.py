@@ -232,7 +232,7 @@ class FOUL(Server):
             self.set_new_clients(clientFOUL)
             print(f"\n-------------Fine tuning round-------------")
             print("\nEvaluate new clients")
-            self.evaluate()
+            self.FUL_evaluate()
 
     def aggregate_foul(self, meta_weights, selected_clients, selected_id, lr_meta):
         # Lấy tất cả parameter names
