@@ -1,0 +1,100 @@
+##implementation of the paper titled  - "CONDA: FAST FEDERATED UNLEARNING WITH CONTRIBUTION DAMPENING"
+## https://arxiv.org/pdf/2410.04144
+
+import time
+from flcore.clients.clientavg import clientAVG
+from flcore.servers.serverbase import Server
+from threading import Thread
+import torch
+
+
+## implmentation of the server conda algo
+class CONDA(Server):
+    def __init__(self, args, times):
+        super().__init__(args, times)
+        self.dampening_constant = args.dampening_constant  # lambda 10 for MNIST, 1 for CIFAR-10 and CIFAR100
+        self.cutoff_alpha = args.cutoff_alpha  # alpha para
+        self.dampening_upper_bound = args.dampening_upper_bound  # U -- as per the paper for MNIST 10 and 1 for cifar10 and 100
+        self.forget_clients = set()  # need to get this from the args todo setup
+
+    def compute_conda_ratio(self, all_gradients, forget_gradients):
+        """Compute the ratio of gradient norms for CONDA dampening"""
+        if not forget_gradients:
+            return 1.0
+
+        all_avg = sum(all_gradients) / len(all_gradients)
+
+        forget_avg = sum(forget_gradients) / len(forget_gradients)
+
+        ratio = torch.norm(all_avg) / (torch.norm(forget_avg) + 1e-8)
+        return ratio
+
+    def train(self):
+        for i in range(self.global_rounds + 1):
+            s_t = time.time()
+            self.selected_clients = self.select_clients()
+            self.send_models()
+
+            if i % self.eval_gap == 0:
+                print(f"\n-------------Round number: {i}-------------")
+                print("\nEvaluate global model")
+                self.evaluate()
+
+            for client in self.selected_clients:
+                client.train()
+
+            # threads = [Thread(target=client.train)
+            #            for client in self.selected_clients]
+            # [t.start() for t in threads]
+            # [t.join() for t in threads]
+
+            self.receive_models()
+
+            ## parametters in CONDA paper
+            all_gradients = []
+            forget_gradients = []
+
+            for client_model in self.uploaded_models:
+                gradient = []
+                for server_param, client_param in zip(self.global_model.parameters(), client_model.parameters()):
+                    gradient.append(client_param.data - server_param.data)  ## grad difference in equation
+                all_gradients.append(gradient)  ## then looping through all clients
+
+                ##forget clients update
+                if client_model.client_id in self.forget_clients:
+                    forget_gradients.append(gradient)
+
+            ## SSD stuff (selective synaptic damping ( i dont know why they use this name instead of parameter dampening))
+            ratio = self.compute_conda_ratio(all_gradients, forget_gradients)
+            zeta = self.dampening_constant * ratio
+            beta = min(zeta, self.dampening_upper_bound)
+
+            print(f"CONDA - Round {i}: ratio = {ratio:.4f}, dampening = {beta:.4f}")
+
+            if self.dlg_eval and i % self.dlg_gap == 0:
+                self.call_dlg(i)
+
+            self.aggregate_parameters(beta, ratio)
+
+            self.Budget.append(time.time() - s_t)
+            print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
+
+            if self.auto_break and self.check_done(acc_lss=[self.rs_test_acc], top_cnt=self.top_cnt):
+                break
+
+        print("\nBest accuracy.")
+        # self.print_(max(self.rs_test_acc), max(
+        #     self.rs_train_acc), min(self.rs_train_loss))
+        print(max(self.rs_test_acc))
+        print("\nAverage time cost per round.")
+        print(sum(self.Budget[1:]) / len(self.Budget[1:]))
+
+        self.save_results()
+        self.save_global_model()
+
+        if self.num_new_clients > 0:
+            self.eval_new_clients = True
+            self.set_new_clients(clientAVG)
+            print(f"\n-------------Fine tuning round-------------")
+            print("\nEvaluate new clients")
+            self.evaluate()
