@@ -342,6 +342,8 @@ if __name__ == "__main__":
 
     ### FOUL
     parser.add_argument('-beta_foul', "--beta_foul", type=float, default=2.0)
+    parser.add_argument('-forget_balance', "--forget_balance", type=bool, default=False,
+                        help="Balance gradients")
 
     ### CONDA
     parser.add_argument('-dampening_constant', "--dampening_constant", type=float, default=1.0)

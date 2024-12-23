@@ -52,13 +52,14 @@ class FOUL(Server):
         self.update_grads = None
         self.foul_c = args.c_parameter
         self.foul_rounds = args.cagrad_rounds
-        self.foul_lr = args.cagrad_learning_rate
+        self.foul_lr = args.cagrad_learning_ratefgrad_normalize
         self.momentum = args.momentum
         self.step_size = args.step_size
         self.meta_lr = args.meta_lr
         self.gamma = args.gamma
         self.beta = args.beta_foul
         self.device = args.device
+        self.fgrad_balance = args.forget_balance
 
     def train(self):
         print("\n======================================")
@@ -222,7 +223,7 @@ class FOUL(Server):
         #     self.rs_train_acc), min(self.rs_train_loss))
         print(max(self.rs_test_acc))
         print("\nAverage time cost per round.")
-        print(sum(self.Budget[1:]) / len(self.Budget[1:]))
+        print(sum(self.Budget[1:]) / len(self.Budget[1:]))normalize
 
         self.save_results()
         self.save_global_model()
@@ -245,6 +246,7 @@ class FOUL(Server):
         all_client_grads = []
         retain_grads = []
         forget_grads = []
+
         for i_client, client in zip(selected_id, selected_clients):
             client_grad = [torch.flatten(inner_param - meta_param) for inner_param, meta_param in
                                  zip(client.parameters(), meta_weights.parameters())]
@@ -255,13 +257,34 @@ class FOUL(Server):
             else:
                 retain_grads.append(client_grad_vector)
         retain_grad_tensor = torch.stack(retain_grads).cpu()
-        forget_grad_tensor = torch.stack(forget_grads).cpu()
+
+        """
+        - Forget Grads normalization.
+        """
+        if self.fgrad_balance:
+            # Apply balancing
+            # Step 1: Compute norms for each gradient vector
+            forget_grad_norms = [torch.norm(grad) for grad in forget_grads]
+
+            # Step 2: Determine scaling factors to balance the norms
+            # Example: Scale all norms to a target value (e.g., the average norm)
+            target_norm = torch.mean(torch.tensor(forget_grad_norms))
+            scaling_factors = [target_norm / norm if norm > 0 else 1.0 for norm in forget_grad_norms]
+
+            # Step 3: Scale gradient vectors
+            balanced_forget_grads = [grad * scale for grad, scale in zip(forget_grads, scaling_factors)]
+
+            # Step 4: Stack the balanced gradients into a tensor
+            forget_grad_tensor = torch.stack(balanced_forget_grads).cpu()
+        else:
+            forget_grad_tensor = torch.stack(forget_grads).cpu()
+
         # all_domains_grad_tensor = torch.stack(all_client_grads)
         foul_grad = self.foul_update(retain_grad_tensor, forget_grad_tensor, len(selected_clients))
         # foul_grad = self.foul_update(all_domains_grad_tensor, len(selected_clients))
 
-        """ Update Grad to Model Parameters """
-        print(f"foul_grad: {foul_grad.size()}")
+        # """ Update Grad to Model Parameters """
+        # print(f"foul_grad: {foul_grad.size()}")
 
         meta_weights_vector = parameters_to_vector(meta_weights.parameters())
         vector_to_parameters(meta_weights_vector + foul_grad * lr_meta, meta_weights.parameters())
