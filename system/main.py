@@ -188,7 +188,7 @@ def run(args):
             args.model = BaseHeadSplit(args.model, args.head)
             server = Retrain(args, i)
         else:
-            raise NotImplementedError
+            raise NotImplementedErrorFOUL
 
         """ Start of the learn/unlearn process"""
         if args.learn == "learn":
@@ -342,6 +342,11 @@ if __name__ == "__main__":
 
     ### FOUL
     parser.add_argument('-beta_foul', "--beta_foul", type=float, default=2.0)
+
+    ### CONDA
+    parser.add_argument('-dampening_constant', "--dampening_constant", type=float, default=1.0)
+    parser.add_argument('-dampening_upper_bound', "--dampening_upper_bound", type=float, default=1.0)
+    parser.add_argument('-cutoff_alpha', "--cutoff_alpha", type=float, default=1.0)
 
     args = parser.parse_args()
 
