@@ -223,7 +223,7 @@ class FOUL(Server):
         #     self.rs_train_acc), min(self.rs_train_loss))
         print(max(self.rs_test_acc))
         print("\nAverage time cost per round.")
-        print(sum(self.Budget[1:]) / len(self.Budget[1:]))normalize
+        print(sum(self.Budget[1:]) / len(self.Budget[1:]))
 
         self.save_results()
         self.save_global_model()
