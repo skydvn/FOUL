@@ -52,7 +52,7 @@ class FOUL(Server):
         self.update_grads = None
         self.foul_c = args.c_parameter
         self.foul_rounds = args.cagrad_rounds
-        self.foul_lr = args.cagrad_learning_ratefgrad_normalize
+        self.foul_lr = args.cagrad_learning_rate
         self.momentum = args.momentum
         self.step_size = args.step_size
         self.meta_lr = args.meta_lr
