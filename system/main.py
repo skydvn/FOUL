@@ -176,6 +176,11 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FOUL(args, i)
+        elif args.algorithm == 'CONDA':
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = CONDA(args, i)
         elif args.algorithm == 'Retrain':
             args.head = copy.deepcopy(args.model.fc)
             args.model.fc = nn.Identity()
@@ -323,7 +328,7 @@ if __name__ == "__main__":
     parser.add_argument('-ss', "--step_size", type=int, default=30)
     parser.add_argument('-gam', "--gamma", type=float, default=0.5)
     parser.add_argument('-c', "--c_parameter", type=float, default=0.5)
-    parser.add_argument('-foulmlr', "--meta_lr", type=float, default=0.5)
+    parser.add_argument('-foulmlr', "--meta_lr", type=float, default=0.5)14.0
 
     ### unlearning arguments to be mentioned here
     parser.add_argument('-learn', '--learn', type=str, default="learn", help='Learn or Unlearn should be '
