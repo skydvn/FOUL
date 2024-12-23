@@ -172,6 +172,7 @@ class Server(object):
             self.send_slow_rate)
 
     def select_clients(self):
+        # print(self.clients)
         if self.random_join_ratio:
             self.current_num_join_clients = \
             np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]

@@ -2,16 +2,28 @@
 ## https://arxiv.org/pdf/2410.04144
 
 import time
-from flcore.clients.clientavg import clientAVG
+from flcore.clients.clientconda import clientConda
 from flcore.servers.serverbase import Server
+from utils.model_utils import ParamDict
 from threading import Thread
 import torch
+from torch.nn.utils import vector_to_parameters, parameters_to_vector
+import copy
+from torch.optim.lr_scheduler import StepLR
+import numpy as np
+import statistics
 
-
+from torch.utils.tensorboard import SummaryWriter
+import wandb
 ## implmentation of the server conda algo
 class CONDA(Server):
     def __init__(self, args, times):
         super().__init__(args, times)
+
+        # select slow clients
+        self.set_slow_clients()
+        self.set_clients(clientConda)
+
         self.dampening_constant = args.dampening_constant  # lambda 10 for MNIST, 1 for CIFAR-10 and CIFAR100
         self.cutoff_alpha = args.cutoff_alpha  # alpha para
         self.dampening_upper_bound = args.dampening_upper_bound  # U -- as per the paper for MNIST 10 and 1 for cifar10 and 100
@@ -25,6 +37,9 @@ class CONDA(Server):
         self.unlearn_round = args.global_rounds - self.learn_round
         if self.unlearn_round < 0:
             raise ValueError("The global rounds must be higher than learn round")
+
+        self.device = args.device
+        self.Budget = []
 
     def train(self):
         print("\n======================================")
@@ -94,7 +109,7 @@ class CONDA(Server):
 
         if self.num_new_clients > 0:
             self.eval_new_clients = True
-            self.set_new_clients(clientFOUL)
+            self.set_new_clients(clientConda)
             print(f"\n-------------Fine tuning round-------------")
             print("\nEvaluate new clients")
             self.evaluate()
@@ -124,14 +139,14 @@ class CONDA(Server):
             all_gradients = []
             forget_gradients = []
 
-            for client_model in self.uploaded_models:
+            for client in self.selected_clients:
                 gradient = []
-                for server_param, client_param in zip(self.global_model.parameters(), client_model.parameters()):
+                for server_param, client_param in zip(self.global_model.parameters(), client.model.parameters()):
                     gradient.append(client_param.data - server_param.data)  ## grad difference in equation
-                all_gradients.append(gradient)  ## then looping through all clients
 
+                all_gradients.append(gradient)  ## then looping through all clients
                 ##forget clients update
-                if client_model.client_id in self.forget_clients:
+                if client.id in self.forget_clients:
                     forget_gradients.append(gradient)
 
             ## SSD stuff (selective synaptic damping ( i dont know why they use this name instead of parameter dampening))
