@@ -60,6 +60,7 @@ class FOUL(Server):
         self.beta = args.beta_foul
         self.device = args.device
         self.fgrad_balance = args.forget_balance
+        self.rgrad_balance = args.retain_balance
 
     def train(self):
         print("\n======================================")
@@ -256,7 +257,27 @@ class FOUL(Server):
                 forget_grads.append(client_grad_vector)
             else:
                 retain_grads.append(client_grad_vector)
-        retain_grad_tensor = torch.stack(retain_grads).cpu()
+
+        """
+        - Retain Grads normalization.
+        """
+        if self.rgrad_balance:
+            # Apply balancing
+            # Step 1: Compute norms for each gradient vector
+            retain_grad_norms = [torch.norm(grad) for grad in retain_grads]
+
+            # Step 2: Determine scaling factors to balance the norms
+            # Example: Scale all norms to a target value (e.g., the average norm)
+            target_norm = torch.mean(torch.tensor(retain_grad_norms))
+            scaling_factors = [target_norm / norm if norm > 0 else 1.0 for norm in retain_grad_norms]
+
+            # Step 3: Scale gradient vectors
+            balanced_retain_grads = [grad * scale for grad, scale in zip(forget_grads, scaling_factors)]
+
+            # Step 4: Stack the balanced gradients into a tensor
+            retain_grad_tensor = torch.stack(balanced_retain_grads).cpu()
+        else:
+            retain_grad_tensor = torch.stack(forget_grads).cpu()
 
         """
         - Forget Grads normalization.
