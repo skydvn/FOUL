@@ -126,8 +126,7 @@ class Bottleneck(nn.Module):
         if has_bn:
             self.bn3 = norm_layer(planes * self.expansion)
         else:
-            self.bn3 = nn.Identity()Bức hình tổng kết hoạt động của ca sĩ Bích Phương trong năm 2024
-Cám ơn máy ảnh gia Thuỷ top nhé vẫn là bác với những pô ảnh có hồn
+            self.bn3 = nn.Identity()
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
