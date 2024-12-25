@@ -35,16 +35,16 @@ class BasicBlock(nn.Module):
     expansion: int = 1
 
     def __init__(
-        self,
-        inplanes: int,
-        planes: int,
-        stride: int = 1,
-        downsample: Optional[nn.Module] = None,
-        groups: int = 1,
-        base_width: int = 64,
-        dilation: int = 1,
-        norm_layer: Optional[Callable[..., nn.Module]] = None, 
-        has_bn = True,
+            self,
+            inplanes: int,
+            planes: int,
+            stride: int = 1,
+            downsample: Optional[nn.Module] = None,
+            groups: int = 1,
+            base_width: int = 64,
+            dilation: int = 1,
+            norm_layer: Optional[Callable[..., nn.Module]] = None,
+            has_bn=True,
     ) -> None:
         super(BasicBlock, self).__init__()
         if norm_layer is None:
@@ -84,7 +84,7 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
 
         return out
-    
+
 
 class Bottleneck(nn.Module):
     # Bottleneck in torchvision places the stride for downsampling at 3x3 convolution(self.conv2)
@@ -96,16 +96,16 @@ class Bottleneck(nn.Module):
     expansion: int = 4
 
     def __init__(
-        self,
-        inplanes: int,
-        planes: int,
-        stride: int = 1,
-        downsample: Optional[nn.Module] = None,
-        groups: int = 1,
-        base_width: int = 64,
-        dilation: int = 1,
-        norm_layer: Optional[Callable[..., nn.Module]] = None,
-        has_bn = True,
+            self,
+            inplanes: int,
+            planes: int,
+            stride: int = 1,
+            downsample: Optional[nn.Module] = None,
+            groups: int = 1,
+            base_width: int = 64,
+            dilation: int = 1,
+            norm_layer: Optional[Callable[..., nn.Module]] = None,
+            has_bn=True,
     ) -> None:
         super().__init__()
         if norm_layer is None:
@@ -126,50 +126,51 @@ class Bottleneck(nn.Module):
         if has_bn:
             self.bn3 = norm_layer(planes * self.expansion)
         else:
-            self.bn3 = nn.Identity()Bức hình tổng kết hoạt động của ca sĩ Bích Phương trong năm 2024
-Cám ơn máy ảnh gia Thuỷ top nhé vẫn là bác với những pô ảnh có hồn
-        self.relu = nn.ReLU(inplace=True)
-        self.downsample = downsample
-        self.stride = stride
+            self.bn3 = nn.Identity()
 
-    def forward(self, x: Tensor) -> Tensor:
-        identity = x
+self.relu = nn.ReLU(inplace=True)
+self.downsample = downsample
+self.stride = stride
 
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
 
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu(out)
+def forward(self, x: Tensor) -> Tensor:
+    identity = x
 
-        out = self.conv3(out)
-        out = self.bn3(out)
+    out = self.conv1(x)
+    out = self.bn1(out)
+    out = self.relu(out)
 
-        if self.downsample is not None:
-            identity = self.downsample(x)
+    out = self.conv2(out)
+    out = self.bn2(out)
+    out = self.relu(out)
 
-        out += identity
-        out = self.relu(out)
+    out = self.conv3(out)
+    out = self.bn3(out)
 
-        return out
-    
+    if self.downsample is not None:
+        identity = self.downsample(x)
 
-class ResNet(nn.Module):
+    out += identity
+    out = self.relu(out)
+
+    return out
+
+
+class UResNet(nn.Module):
 
     def __init__(
-        self,
-        block: BasicBlock,
-        layers: List[int],
-        features: List[int] = [64, 128, 256, 512],
-        num_classes: int = 1000,
-        zero_init_residual: bool = False,
-        groups: int = 1,
-        width_per_group: int = 64,
-        replace_stride_with_dilation: Optional[List[bool]] = None,
-        norm_layer: Optional[Callable[..., nn.Module]] = None, 
-        has_bn = True,
-        bn_block_num = 4, 
+            self,
+            block: BasicBlock,
+            layers: List[int],
+            features: List[int] = [64, 128, 256, 512],
+            num_classes: int = 1000,
+            zero_init_residual: bool = False,
+            groups: int = 1,
+            width_per_group: int = 64,
+            replace_stride_with_dilation: Optional[List[bool]] = None,
+            norm_layer: Optional[Callable[..., nn.Module]] = None,
+            has_bn=True,
+            bn_block_num=4,
     ) -> None:
         super(ResNet, self).__init__()
         if norm_layer is None:
@@ -197,8 +198,8 @@ class ResNet(nn.Module):
         self.layers.extend(self._make_layer(block, 64, layers[0], has_bn=has_bn and (bn_block_num > 0)))
         for num in range(1, len(layers)):
             self.layers.extend(self._make_layer(block, features[num], layers[num], stride=2,
-                                       dilate=replace_stride_with_dilation[num-1], 
-                                       has_bn=has_bn and (num < bn_block_num)))
+                                                dilate=replace_stride_with_dilation[num - 1],
+                                                has_bn=has_bn and (num < bn_block_num)))
 
         for i, layer in enumerate(self.layers):
             setattr(self, f'layer_{i}', layer)
@@ -207,11 +208,11 @@ class ResNet(nn.Module):
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten()
         )
-        self.fc = nn.Linear(features[len(layers)-1] * block.expansion, num_classes)
+        self.fc = nn.Linear(features[len(layers) - 1] * block.expansion, num_classes)
 
         # self.fc = nn.Sequential(
-        #     nn.AdaptiveAvgPool2d((1, 1)), 
-        #     nn.Flatten(), 
+        #     nn.AdaptiveAvgPool2d((1, 1)),
+        #     nn.Flatten(),
         #     nn.Linear(features[len(layers)-1] * block.expansion, num_classes)
         # )
 
@@ -279,29 +280,37 @@ class ResNet(nn.Module):
         return self._forward_impl(x)
 
 
-def resnet152(**kwargs: Any) -> ResNet: 
-    return ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
+def uresnet152(**kwargs: Any) -> ResNet:
+    return UResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
 
-def resnet101(**kwargs: Any) -> ResNet: 
-    return ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
 
-def resnet50(**kwargs: Any) -> ResNet: 
-    return ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
+def uresnet101(**kwargs: Any) -> ResNet:
+    return UResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
 
-def resnet34(**kwargs: Any) -> ResNet: 
-    return ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
 
-def resnet18(**kwargs: Any) -> ResNet: # 18 = 2 + 2 * (2 + 2 + 2 + 2)
-    return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+def uresnet50(**kwargs: Any) -> ResNet:
+    return UResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
 
-def resnet10(**kwargs: Any) -> ResNet: # 10 = 2 + 2 * (1 + 1 + 1 + 1)
-    return ResNet(BasicBlock, [1, 1, 1, 1], **kwargs)
 
-def resnet8(**kwargs: Any) -> ResNet: # 8 = 2 + 2 * (1 + 1 + 1)
-    return ResNet(BasicBlock, [1, 1, 1], **kwargs)
+def uresnet34(**kwargs: Any) -> ResNet:
+    return UResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
 
-def resnet6(**kwargs: Any) -> ResNet: # 6 = 2 + 2 * (1 + 1)
-    return ResNet(BasicBlock, [1, 1], **kwargs)
 
-def resnet4(**kwargs: Any) -> ResNet: # 4 = 2 + 2 * (1)
-    return ResNet(BasicBlock, [1], **kwargs)
+def uresnet18(**kwargs: Any) -> ResNet:  # 18 = 2 + 2 * (2 + 2 + 2 + 2)
+    return UResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+
+
+def uresnet10(**kwargs: Any) -> ResNet:  # 10 = 2 + 2 * (1 + 1 + 1 + 1)
+    return UResNet(BasicBlock, [1, 1, 1, 1], **kwargs)
+
+
+def uresnet8(**kwargs: Any) -> ResNet:  # 8 = 2 + 2 * (1 + 1 + 1)
+    return UResNet(BasicBlock, [1, 1, 1], **kwargs)
+
+
+def uresnet6(**kwargs: Any) -> ResNet:  # 6 = 2 + 2 * (1 + 1)
+    return UResNet(BasicBlock, [1, 1], **kwargs)
+
+
+def uresnet4(**kwargs: Any) -> ResNet:  # 4 = 2 + 2 * (1)
+    return UResNet(BasicBlock, [1], **kwargs)
