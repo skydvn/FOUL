@@ -28,6 +28,7 @@ import logging
 
 from flcore.servers.serveravg import FedAvg
 from flcore.servers.serverfoul import FOUL
+from flcore.servers.serverufoul import UFOUL
 from flcore.servers.serverretrain import Retrain
 from flcore.servers.serverconda import CONDA
 
@@ -177,6 +178,11 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FOUL(args, i)
+        elif args.algorithm == 'UFOUL':
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = UFOUL(args, i)
         elif args.algorithm == 'CONDA':
             args.head = copy.deepcopy(args.model.fc)
             args.model.fc = nn.Identity()
