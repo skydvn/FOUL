@@ -352,8 +352,8 @@ if __name__ == "__main__":
     parser.add_argument('-retain_balance', "--retain_balance", type=bool, default=False, help="Balance r gradients")
 
     ### CONDA
-    parser.add_argument('-dampening_constant', "--dampening_constant", type=float, default=1.0)
-    parser.add_argument('-dampening_upper_bound', "--dampening_upper_bound", type=float, default=1.0)
+    parser.add_argument('-dampening_constant', "--dampening_constant", type=float, default=10.0, help='lambda 10 for MNIST, 1 for CIFAR-10 and CIFAR100')
+    parser.add_argument('-dampening_upper_bound', "--dampening_upper_bound", type=float, default=1.0,help='U 10 for MNIST, 1 for CIFAR-10 and CIFAR100' )
     parser.add_argument('-cutoff_alpha', "--cutoff_alpha", type=float, default=1.0)
 
     args = parser.parse_args()
