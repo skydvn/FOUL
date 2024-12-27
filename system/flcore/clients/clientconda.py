@@ -44,8 +44,7 @@ class clientConda(Client):
                 else:
                     x = x.to(self.device)
                 y = y.to(self.device)
-                if self.train_slow:
-                    time.sleep(0.1 * np.abs(np.random.rand()))
+                
                 output = self.model(x)
                 loss = self.loss(output, y)
                 self.optimizer.zero_grad()
@@ -64,4 +63,26 @@ class clientConda(Client):
         """ need to define a client unlearn method for the algorithm too
         which will be called in the serveravg train loop and initiate the unlearn method
         therefore we define the unlean method here"""
-        pass
+        # initial parameteres saving prior to unlearning
+        self.model.train()
+        initial_parameters = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        forgetloader = self.load_train_data() ## in this case there should be custom forget loader
+        
+        for x, y in forgetloader:
+            x, y = x.to(self.device), y.to(self.device)
+            output = self.model(x)
+            loss = self.loss(output, y)
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            
+            for param in self.model.parameters():
+                param.data += self.optimizer.defaults['lr'] * param.grad  # Gradient ascent step
+                
+        
+        ## calculating the difference between the paramterers
+        gradient_updates = {name: param - initial_parameters[name] for name, param in self.model.named_parameters()}
+        
+        return gradient_updates
+    
