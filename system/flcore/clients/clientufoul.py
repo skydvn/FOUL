@@ -50,6 +50,25 @@ class clientUFOUL(Client):
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+                # """
+                # - measure each loss separately
+                #
+                # """
+                # self.optimizer1.zero_grad()
+                # loss1.backward()
+                # self.optimizer1.step()
+                # self.optimizer2.zero_grad()
+                # loss2.backward()
+                # self.optimizer2.step()
+                # self.optimizer3.zero_grad()
+                # loss3.backward()
+                # self.optimizer3.step()
+                # self.optimizer4.zero_grad()
+                # loss4.backward()
+                # self.optimizer4.step()
+                # self.optimizer5.zero_grad()
+                # loss5.backward()
+                # self.optimizer5.step()
 
         # self.model.cpu()
 
@@ -64,3 +83,11 @@ class clientUFOUL(Client):
         which will be called in the serveravg train loop and initiate the unlearn method
         therefore we define the unlean method here"""
         pass
+
+
+    # def optimizer_setup(self):
+    #     self.optimizer1 = torch.optim.SGD(self.model.general_enc.parameters(), lr=self.learning_rate)
+    #     self.optimizer2 = torch.optim.SGD(self.model.inv_enc.parameters(), lr=self.learning_rate)
+    #     self.optimizer3 = torch.optim.SGD(self.model.var_enc.parameters(), lr=self.learning_rate)
+    #     self.optimizer4 = torch.optim.SGD(self.model.classifier.parameters(), lr=self.learning_rate)
+    #     self.optimizer5 = torch.optim.SGD(self.model.reconstructor.parameters(), lr=self.learning_rate)

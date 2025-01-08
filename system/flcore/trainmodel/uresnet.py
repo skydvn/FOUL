@@ -268,19 +268,41 @@ class UResNet(nn.Module):
         x = self.maxpool(x)
         x1 = x
         x2 = x
-        
+
+        """
+        Wrap into Invariant Encoder
+        """
         for i in range(len(self.layers)):
             layer = getattr(self, f'layer_{i}')
             x1 = layer(x1)
-
+        """
+        Wrap into Variant Encoder
+        """
         for i in range(len(self.layers)):
             layer = getattr(self, f'layer_{i}')
             x2 = layer(x2)
 
+        """
+        Add a reconstruction decoder head
+        """
+
+        """
+        Wrap into Classifier
+        """
         x = self.avgpool(x)
         x = self.fc(x)
 
         return x
+
+    def _forward_impl_exp(self, x: Tensor) -> Tensor:
+        x = self.general_enc(x)
+        x_inv = self.inv_enc(x)
+        x_var = self.var_enc(x)
+        x_tot = torch.concat(x_inv, x_var) # Use torch.concat
+        y = self.classifier(x_tot)
+        x_rec = self.reconstructor(x_tot)
+
+        return y, x_rec
 
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
