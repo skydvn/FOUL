@@ -15,6 +15,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import torch
 import torch.nn as nn
 from torch import Tensor
 from typing import Any, Callable, List, Optional
