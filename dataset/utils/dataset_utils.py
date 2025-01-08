@@ -517,3 +517,12 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
         print("-" * 50)
 
     return X, y, statistic
+
+def splits_generator():
+    """
+        - This is for VLCS.
+    """
+    # Walk over all <Domain> folders in <Dataset> folder
+    # Walk over all <Label> folders in <Domain> folder
+    # 
+    pass
