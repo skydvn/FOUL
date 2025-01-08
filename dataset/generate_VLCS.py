@@ -53,6 +53,7 @@ def read_VLCS_data(dataset_path, domain_name, split="train"):
         for line in lines:
             line = line.strip()
             data_path, label = line.split(' ')
+
             data_path = path.join(dataset_path, data_path)
             label = int(label)
             data_paths.append(data_path)
