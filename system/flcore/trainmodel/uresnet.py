@@ -128,9 +128,9 @@ class Bottleneck(nn.Module):
         else:
             self.bn3 = nn.Identity()
 
-self.relu = nn.ReLU(inplace=True)
-self.downsample = downsample
-self.stride = stride
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
 
 
 def forward(self, x: Tensor) -> Tensor:
