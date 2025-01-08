@@ -242,7 +242,7 @@ class UResNet(nn.Module):
             if has_bn:
                 downsample = nn.Sequential(
                     conv1x1(self.inplanes, planes * block.expansion, stride),
-                    norm_layer(planes * block.expansion),features
+                    norm_layer(planes * block.expansion)
                 )
             else:
                 downsample = nn.Sequential(
