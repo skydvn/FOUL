@@ -68,12 +68,13 @@ class Client(object):
         self.learning_rate_decay = args.learning_rate_decay
 
     def re_init(self, args):
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
-        self.learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=self.optimizer,
-            gamma=args.learning_rate_decay_gamma
-        )
-        self.learning_rate_decay = args.learning_rate_decay
+        if args.re_init:
+            self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                optimizer=self.optimizer,
+                gamma=args.learning_rate_decay_gamma
+            )
+            self.learning_rate_decay = args.learning_rate_decay
 
     def load_train_data(self, batch_size=None):
         if batch_size == None:
