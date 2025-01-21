@@ -1,20 +1,5 @@
-# PFLlib: Personalized Federated Learning Algorithm Library
-# Copyright (C) 2021  Jianqing Zhang
 
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
+import torch
 import torch.nn as nn
 from torch import Tensor
 from typing import Any, Callable, List, Optional
@@ -230,6 +215,42 @@ class UResNet(nn.Module):
                 elif isinstance(m, BasicBlock) and m.bn2.weight is not None:
                     nn.init.constant_(m.bn2.weight, 0)  # type: ignore[arg-type]
 
+        self.inv_encoder = nn.Sequential() ## creating the invariant encoder
+        for i in range(len(self.layers)):
+            layer = getattr(self, f'layer_{i}')
+            self.inv_encoder.add_module(f'inv_layer_{i}', layer)
+
+        self.var_encoder = nn.Sequential() ## varaint encoder
+        for i in range(len(self.layers)):
+            layer = getattr(self, f'layer_{i}')
+            self.var_encoder.add_module(f'var_layer_{i}', layer)
+
+        #decoder reconstruction head
+        self.decoder = nn.Sequential(
+        # Upsample and reduce channels gradually
+        nn.ConvTranspose2d(features[len(layers)-1] * block.expansion, features[2], kernel_size=2, stride=2),
+        nn.BatchNorm2d(features[2]),
+        nn.ReLU(inplace=True),
+        
+        nn.ConvTranspose2d(features[2], features[1], kernel_size=2, stride=2),
+        nn.BatchNorm2d(features[1]),
+        nn.ReLU(inplace=True),
+        
+        nn.ConvTranspose2d(features[1], features[0], kernel_size=2, stride=2),
+        nn.BatchNorm2d(features[0]),
+        nn.ReLU(inplace=True),
+        
+        # Final reconstruction to original image size and channels
+        nn.ConvTranspose2d(features[0], 3, kernel_size=2, stride=2),
+        nn.Tanh()  # or nn.Sigmoid() depending on your input normalization
+    )
+
+        self.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(features[len(layers)-1] * block.expansion, num_classes)
+        )
+
     def _make_layer(self, block: BasicBlock, planes: int, blocks: int,
                     stride: int = 1, dilate: bool = False, has_bn=True) -> List:
         norm_layer = self._norm_layer
@@ -272,27 +293,25 @@ class UResNet(nn.Module):
         """
         Wrap into Invariant Encoder
         """
-        for i in range(len(self.layers)):
-            layer = getattr(self, f'layer_{i}')
-            x1 = layer(x1)
+        x1 = self.inv_encoder(x1)
+
         """
         Wrap into Variant Encoder
         """
-        for i in range(len(self.layers)):
-            layer = getattr(self, f'layer_{i}')
-            x2 = layer(x2)
+        x2 = self.var_encoder(x2)
 
         """
         Add a reconstruction decoder head
         """
+        combined_features = torch.cat([x1, x2], dim=1) ## concat the invariant and variant features 
+        x_rec = self.decoder(combined_features)
 
         """
         Wrap into Classifier
         """
-        x = self.avgpool(x)
-        x = self.fc(x)
+        x = self.classifier(x)
 
-        return x
+        return x, x_rec
 
     def _forward_impl_exp(self, x: Tensor) -> Tensor:
         x = self.general_enc(x)
