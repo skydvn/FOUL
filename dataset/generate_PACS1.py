@@ -122,7 +122,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
 
         dataset_image_d = np.array(dataset_image_d)
         dataset_label_d = np.array(dataset_label_d)
-        dataset_label_d = dataset_label_d - 1
+        dataset_label_d = dataset_label_d
 
         dataset_image.append(dataset_image_d)
         dataset_label.append(dataset_label_d)

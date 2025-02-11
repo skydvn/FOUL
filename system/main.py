@@ -350,6 +350,7 @@ if __name__ == "__main__":
     parser.add_argument('-beta_foul', "--beta_foul", type=float, default=2.0)
     parser.add_argument('-forget_balance', "--forget_balance", type=bool, default=False, help="Balance f gradients")
     parser.add_argument('-retain_balance', "--retain_balance", type=bool, default=False, help="Balance r gradients")
+    parser.add_argument('-re_init', "--re_init", type=bool, default=False)
 
     ### CONDA
     parser.add_argument('-dampening_constant', "--dampening_constant", type=float, default=10.0, help='lambda 10 for MNIST, 1 for CIFAR-10 and CIFAR100')
