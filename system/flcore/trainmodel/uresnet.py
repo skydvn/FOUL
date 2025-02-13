@@ -223,7 +223,7 @@ class UResNet(nn.Module):
             layer = getattr(self, f'layer_{i}')
             self.inv_encoder.add_module(f'inv_layer_{i}', layer)
 
-        self.var_encoder = nn.Sequential() ## varaint encoder
+        self.var_encoder = nn.Sequential() ## variant encoder
         for i in range(len(self.layers)):
             layer = getattr(self, f'layer_{i}')
             self.var_encoder.add_module(f'var_layer_{i}', layer)
