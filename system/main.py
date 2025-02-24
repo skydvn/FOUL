@@ -37,6 +37,7 @@ from flcore.trainmodel.models import *
 from flcore.trainmodel.bilstm import *
 from flcore.trainmodel.resnet import *
 from flcore.trainmodel.alexnet import *
+from flcore.trainmodel.uresnet import *
 from flcore.trainmodel.mobilenet_v2 import *
 from flcore.trainmodel.transformer import *
 
@@ -162,6 +163,15 @@ def run(args):
                 args.model = HARCNN(9, dim_hidden=3712, num_classes=args.num_classes, conv_kernel_size=(1, 9),
                                     pool_kernel_size=(1, 2)).to(args.device)
 
+
+
+        ## uresnet foul code starts here
+        elif model_str == "uresnet":
+            if "MNIST" in args.dataset:
+                args.model = UResNet(block=BasicBlock, layers=[2, 2, 2, 2], num_classes=args.num_classes).to(args.device)
+            else :
+                args.model = UResNet(block=BasicBlock, layers=[2, 2, 2, 2], num_classes=args.num_classes).to(args.device)
+
         else:
             raise NotImplementedError
 
@@ -233,7 +243,7 @@ if __name__ == "__main__":
     parser.add_argument('-did', "--device_id", type=str, default="0")
     parser.add_argument('-data', "--dataset", type=str, default="PACS")
     parser.add_argument('-nb', "--num_classes", type=int, default=7)
-    parser.add_argument('-m', "--model", type=str, default="CNN")
+    parser.add_argument('-m', "--model", type=str, default="uresnet")
     parser.add_argument('-lbs', "--batch_size", type=int, default=10)
     parser.add_argument('-lr', "--local_learning_rate", type=float, default=0.005,
                         help="Local learning rate")
