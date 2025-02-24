@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-
->>>>>>> 1eab3d1b73c523cefd609a0fdf32cc432bb34acc
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -160,7 +156,7 @@ class UResNet(nn.Module):
             has_bn=True,
             bn_block_num=4,
     ) -> None:
-        super(ResNet, self).__init__()
+        super(UResNet, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
@@ -223,30 +219,25 @@ class UResNet(nn.Module):
             layer = getattr(self, f'layer_{i}')
             self.inv_encoder.add_module(f'inv_layer_{i}', layer)
 
-        self.var_encoder = nn.Sequential() ## variant encoder
+        self.var_encoder = nn.Sequential() ## varaint encoder
         for i in range(len(self.layers)):
             layer = getattr(self, f'layer_{i}')
             self.var_encoder.add_module(f'var_layer_{i}', layer)
 
         #decoder reconstruction head
         self.decoder = nn.Sequential(
-        # Upsample and reduce channels gradually
-        nn.ConvTranspose2d(features[len(layers)-1] * block.expansion, features[2], kernel_size=2, stride=2),
-        nn.BatchNorm2d(features[2]),
-        nn.ReLU(inplace=True),
-        
-        nn.ConvTranspose2d(features[2], features[1], kernel_size=2, stride=2),
-        nn.BatchNorm2d(features[1]),
-        nn.ReLU(inplace=True),
-        
-        nn.ConvTranspose2d(features[1], features[0], kernel_size=2, stride=2),
-        nn.BatchNorm2d(features[0]),
-        nn.ReLU(inplace=True),
-        
-        # Final reconstruction to original image size and channels
-        nn.ConvTranspose2d(features[0], 3, kernel_size=2, stride=2),
-        nn.Tanh()  # or nn.Sigmoid() depending on your input normalization
-    )
+            nn.ConvTranspose2d(2 * features[len(layers)-1] * block.expansion, features[2], kernel_size=2, stride=2),
+            nn.BatchNorm2d(features[2]),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(features[2], features[1], kernel_size=2, stride=2),
+            nn.BatchNorm2d(features[1]),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(features[1], features[0], kernel_size=2, stride=2),
+            nn.BatchNorm2d(features[0]),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(features[0], 3, kernel_size=2, stride=2),
+            nn.Tanh()  # Adjust activation based on your needs
+        )
 
         self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool2d((1, 1)),
@@ -293,29 +284,18 @@ class UResNet(nn.Module):
         x1 = x
         x2 = x
 
-        """
-        Wrap into Invariant Encoder
-        """
         x1 = self.inv_encoder(x1)
-
-        """
-        Wrap into Variant Encoder
-        """
         x2 = self.var_encoder(x2)
 
-        """
-        Add a reconstruction decoder head
-        """
-        combined_features = torch.cat([x1, x2], dim=1) ## concat the invariant and variant features 
+        combined_features = torch.cat([x1, x2], dim=1)
         x_rec = self.decoder(combined_features)
 
-        """
-        Wrap into Classifier
-        """
-        x = self.classifier(x)
+        x = self.classifier(x1)  # Fix: Use x1 instead of x
 
         return x, x_rec
-
+    
+    
+    ### for Mr Duong whats the meaning of the code below
     def _forward_impl_exp(self, x: Tensor) -> Tensor:
         x = self.general_enc(x)
         x_inv = self.inv_enc(x)
@@ -330,37 +310,37 @@ class UResNet(nn.Module):
         return self._forward_impl(x)
 
 
-def uresnet152(**kwargs: Any) -> ResNet:
+def uresnet152(**kwargs: Any) -> UResNet:
     return UResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
 
 
-def uresnet101(**kwargs: Any) -> ResNet:
+def uresnet101(**kwargs: Any) -> UResNet:
     return UResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
 
 
-def uresnet50(**kwargs: Any) -> ResNet:
+def uresnet50(**kwargs: Any) -> UResNet:
     return UResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
 
 
-def uresnet34(**kwargs: Any) -> ResNet:
+def uresnet34(**kwargs: Any) -> UResNet:
     return UResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
 
 
-def uresnet18(**kwargs: Any) -> ResNet:  # 18 = 2 + 2 * (2 + 2 + 2 + 2)
+def uresnet18(**kwargs: Any) -> UResNet:  # 18 = 2 + 2 * (2 + 2 + 2 + 2)
     return UResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
 
-def uresnet10(**kwargs: Any) -> ResNet:  # 10 = 2 + 2 * (1 + 1 + 1 + 1)
+def uresnet10(**kwargs: Any) -> UResNet:  # 10 = 2 + 2 * (1 + 1 + 1 + 1)
     return UResNet(BasicBlock, [1, 1, 1, 1], **kwargs)
 
 
-def uresnet8(**kwargs: Any) -> ResNet:  # 8 = 2 + 2 * (1 + 1 + 1)
+def uresnet8(**kwargs: Any) -> UResNet:  # 8 = 2 + 2 * (1 + 1 + 1)
     return UResNet(BasicBlock, [1, 1, 1], **kwargs)
 
 
-def uresnet6(**kwargs: Any) -> ResNet:  # 6 = 2 + 2 * (1 + 1)
+def uresnet6(**kwargs: Any) -> UResNet:  # 6 = 2 + 2 * (1 + 1)
     return UResNet(BasicBlock, [1, 1], **kwargs)
 
 
-def uresnet4(**kwargs: Any) -> ResNet:  # 4 = 2 + 2 * (1)
+def uresnet4(**kwargs: Any) -> UResNet:  # 4 = 2 + 2 * (1)
     return UResNet(BasicBlock, [1], **kwargs)
