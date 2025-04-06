@@ -32,8 +32,34 @@ class BaseHeadSplit(nn.Module):
         
     def forward(self, x):
         out = self.base(x)
+        # Handle tuple output from base model
+        if isinstance(out, tuple):
+            out = out[0]  # Take the first element if it's a tuple
+            
+        # Get the expected input size for the head
+        expected_input_size = self.head.in_features
+        
+        # Reshape the output to match the expected input size
+        if out.size(1) != expected_input_size:
+            # If the output is a 2D tensor with shape [batch_size, features]
+            if out.dim() == 2:
+                # Create a new tensor with the expected size
+                new_out = torch.zeros(out.size(0), expected_input_size, device=out.device)
+                # Copy the available features
+                min_features = min(out.size(1), expected_input_size)
+                new_out[:, :min_features] = out[:, :min_features]
+                out = new_out
+            else:
+                # For higher dimensional tensors, flatten and pad/truncate
+                out = out.view(out.size(0), -1)
+                if out.size(1) > expected_input_size:
+                    out = out[:, :expected_input_size]
+                else:
+                    # Pad with zeros if needed
+                    padding = torch.zeros(out.size(0), expected_input_size - out.size(1), device=out.device)
+                    out = torch.cat([out, padding], dim=1)
+        
         out = self.head(out)
-
         return out
 
 ###########################################################
