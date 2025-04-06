@@ -15,188 +15,670 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import copy
 import torch
-import torch.nn as nn
-import numpy as np
 import os
-from torch.utils.data import DataLoader
-from sklearn.preprocessing import label_binarize
-from sklearn import metrics
+import numpy as np
+import h5py
+import copy
+import time
+import random
 from utils.data_utils import read_client_data
+from utils.dlg import DLG
 
+from torch.utils.tensorboard import SummaryWriter
+import wandb
 
-class Client(object):
-    """
-    Base class for clients in federated learning.
-    """
-
-    def __init__(self, args, id, train_samples, test_samples, **kwargs):
-        torch.manual_seed(0)
-        self.model = copy.deepcopy(args.model)
-        self.algorithm = args.algorithm
-        self.dataset = args.dataset
+class Server(object):
+    def __init__(self, args, times):
+        # Set up the main attributes
+        self.args = args
         self.device = args.device
-        self.id = id  # integer
-        self.save_folder_name = args.save_folder_name
-
+        self.dataset = args.dataset
         self.num_classes = args.num_classes
-        self.train_samples = train_samples
-        self.test_samples = test_samples
+        self.global_rounds = args.global_rounds
+        self.local_epochs = args.local_epochs
         self.batch_size = args.batch_size
         self.learning_rate = args.local_learning_rate
-        self.local_epochs = args.local_epochs
+        self.global_model = copy.deepcopy(args.model)
+        self.init_model = copy.deepcopy(args.model)
+        self.num_clients = args.num_clients
+        self.join_ratio = args.join_ratio
+        self.random_join_ratio = args.random_join_ratio
 
-        # check BatchNorm
-        self.has_BatchNorm = False
-        for layer in self.model.children():
-            if isinstance(layer, nn.BatchNorm2d):
-                self.has_BatchNorm = True
-                break
+        self.num_join_clients = int(self.num_clients * self.join_ratio)
+        self.current_num_join_clients = self.num_join_clients
+        self.current_unlearn = self.current_num_join_clients // 4
+        self.current_learn = self.current_num_join_clients - self.current_unlearn
 
-        self.train_slow = kwargs['train_slow']
-        self.send_slow = kwargs['send_slow']
-        self.train_time_cost = {'num_rounds': 0, 'total_cost': 0.0}
-        self.send_time_cost = {'num_rounds': 0, 'total_cost': 0.0}
+        self.algorithm = args.algorithm
+        self.time_select = args.time_select
+        self.goal = args.goal
+        self.time_threthold = args.time_threthold
+        self.save_folder_name = args.save_folder_name
+        self.top_cnt = 100
+        self.auto_break = args.auto_break
 
-        self.loss = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
-        self.learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=self.optimizer, 
-            gamma=args.learning_rate_decay_gamma
-        )
-        self.learning_rate_decay = args.learning_rate_decay
+        self.clients = []
+        self.selected_clients = []
+        self.train_slow_clients = []
+        self.send_slow_clients = []
 
-    def re_init(self, args):
-        if args.re_init:
-            self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
-            self.learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                optimizer=self.optimizer,
-                gamma=args.learning_rate_decay_gamma
+        self.uploaded_weights = []
+        self.uploaded_ids = []
+        self.uploaded_models = []
+
+        self.rs_test_acc = []
+        self.rs_test_auc = []
+        self.rs_train_loss = []
+
+        self.times = times
+        self.eval_gap = args.eval_gap
+        self.client_drop_rate = args.client_drop_rate
+        self.train_slow_rate = args.train_slow_rate
+        self.send_slow_rate = args.send_slow_rate
+
+        self.dlg_eval = args.dlg_eval
+        self.dlg_gap = args.dlg_gap
+        self.batch_num_per_client = args.batch_num_per_client
+
+        self.num_new_clients = args.num_new_clients
+        self.new_clients = []
+        self.eval_new_clients = False
+        self.fine_tuning_epoch_new = args.fine_tuning_epoch_new
+
+        ##unlearning part
+        self.learn_clients_count = args.learn_round
+        self.learning_status = args.learn
+        # self.learn_clients_precentage = args.learn_client_percentage        self.forget_list = [args.f_index*5 + i for i in range(5)]
+        self.forget_list = [args.f_index * 5 + i for i in range(5)]
+        self.last_acc = [0 for _ in range(self.num_clients)]
+
+        if self.args.log:
+            args.run_name = (f"{args.algorithm}__{args.dataset}__{args.num_clients}__"
+                             f"{args.local_epochs}__{args.beta_foul}__{int(time.time())}")
+
+            self.current_round = -1
+            self.save_dir = f"runs/{args.run_name}"
+            self.writer = SummaryWriter(self.save_dir)
+            self.writer.add_text(
+                "hyperparameters",
+                "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
             )
-            self.learning_rate_decay = args.learning_rate_decay
 
-    def load_train_data(self, batch_size=None):
-        if batch_size == None:
-            batch_size = self.batch_size
-        train_data = read_client_data(self.dataset, self.id, is_train=True)
-        return DataLoader(train_data, batch_size, drop_last=True, shuffle=True)
+            wandb.login(key="8923eb30938bc12331e4b4ff0f34193282742f4e", force=True)
 
-    def load_test_data(self, batch_size=None):
-        if batch_size == None:
-            batch_size = self.batch_size
-        test_data = read_client_data(self.dataset, self.id, is_train=False)
-        return DataLoader(test_data, batch_size, drop_last=False, shuffle=True)
-        
-    def set_parameters(self, model):
-        for new_param, old_param in zip(model.parameters(), self.model.parameters()):
-            old_param.data = new_param.data.clone()
+            self.__run = wandb.init(
+                project="FOUL",
+                entity="senurahansaja",
+                config=args,
+                name=args.run_name,
+                force=True
+            )
 
-    def clone_model(self, model, target):
-        for param, target_param in zip(model.parameters(), target.parameters()):
-            target_param.data = param.data.clone()
-            # target_param.grad = param.grad.clone()
+    def set_clients(self, clientObj):
+        """This is function which set each client and assign data to them """
+        for i, train_slow, send_slow in zip(range(self.num_clients), self.train_slow_clients, self.send_slow_clients):
+            train_data = read_client_data(self.dataset, i, is_train=True)
+            test_data = read_client_data(self.dataset, i, is_train=False)
+            client = clientObj(self.args,
+                               id=i,
+                               train_samples=len(train_data),
+                               test_samples=len(test_data),
+                               train_slow=train_slow,
+                               send_slow=send_slow)
+            self.clients.append(client)
 
-    def update_parameters(self, model, new_params):
-        for param, new_param in zip(model.parameters(), new_params):
-            param.data = new_param.data.clone()
+    # def set_unlearn_clients(self, clientObj):  ## i think this will be redundant
+    #     """
+    #     This method sets the initial clients to be active learning clients,
+    #     and the rest to be unlearn clients. The first 'learn_clients_count' clients
+    #     will be set as learn clients, and the rest will be treated as unlearn clients.
+    #     """
+    #     for i in range(self.num_clients):
+    #         # iterate through learn partold_model
+    #         is_learn_client = i < self.learn_clients_count
+
+    #         # Assign data to the clients
+    #         train_data = read_client_data(self.dataset, i, is_train=True)
+    #         test_data = read_client_data(self.dataset, i, is_train=False)
+
+    #         client = clientObj(
+    #             self.args,
+    #             id=i,
+    #             train_samples=len(train_data),
+    #             test_samples=len(test_data),
+    #             train_slow=False,  # these were set to false becauase we dont care about them at this moment
+    #             send_slow=False,
+    #             is_learn_client=is_learn_clientself.global_model = copy.deepcopy(args.model)
+    #         )
+    #         self.clients.append(client)
+
+    #         print(f"Total clients set: {self.num_clients}, Learn clients: {self.learn_clients_count}, Unlearn clients: {self.num_clients - self.learn_clients_count}")
+
+    # random select slow clients
+    def select_slow_clients(self, slow_rate):
+        slow_clients = [False for i in range(self.num_clients)]
+        idx = [i for i in range(self.num_clients)]
+        idx_ = np.random.choice(idx, int(slow_rate * self.num_clients))
+        for i in idx_:
+            slow_clients[i] = True
+
+        return slow_clients
+
+    def set_slow_clients(self):
+        self.train_slow_clients = self.select_slow_clients(
+            self.train_slow_rate)
+        self.send_slow_clients = self.select_slow_clients(
+            self.send_slow_rate)
+
+    def select_clients(self):
+        # print(self.clients)
+        if self.random_join_ratio:
+            self.current_num_join_clients = \
+            np.random.choice(range(self.num_join_clients, self.num_clients + 1), 1, replace=False)[0]
+        else:
+            self.current_num_join_clients = self.num_join_clients
+        selected_clients = list(np.random.choice(self.clients, self.current_num_join_clients, replace=False))
+
+        return selected_clients
+
+    def unlearn_select_clients(self):
+        retain_clients = [self.clients[i] for i in range(len(self.clients)) if
+                          i not in self.forget_list]  # Exclude these indices
+        forget_clients = [self.clients[i] for i in range(len(self.clients)) if
+                          i in self.forget_list]  # Exclude these indices
+
+        # print(f"{len(retain_clients)} {self.current_num_join_clients}")
+        num_joint_retain = self.num_join_clients if self.num_join_clients < len(retain_clients) \
+                                                 else len(retain_clients)
+        print(f"{num_joint_retain}-{len(forget_clients)}")
+        if self.random_join_ratio:
+            self.current_num_join_clients = \
+                np.random.choice(range(num_joint_retain, self.num_clients + 1), 1, replace=False)[0]
+        else:
+            self.current_num_join_clients = num_joint_retain
+
+        selected_clients = list(np.random.choice(retain_clients, self.current_num_join_clients, replace=False))
+        unselected_clients = list(np.random.choice(forget_clients, len(forget_clients), replace=False))
+
+        # print(f"learn:{learn_selected_clients}")
+        # print(f"unlearn:{unlearn_selected_clients}")
+        # print(f"all:{selected_clients}")
+        return selected_clients, unselected_clients
+
+
+    def send_models(self):
+        assert (len(self.clients) > 0)
+
+        for client in self.clients:
+            start_time = time.time()
+
+            client.set_parameters(self.global_model)
+
+            client.send_time_cost['num_rounds'] += 1
+            client.send_time_cost['total_cost'] += 2 * (time.time() - start_time)
+
+    def receive_models(self):
+        assert (len(self.selected_clients) > 0)
+
+        active_clients = random.sample(
+            self.selected_clients, int((1 - self.client_drop_rate) * self.current_num_join_clients))
+
+        self.uploaded_ids = []
+        self.uploaded_weights = []
+        self.uploaded_models = []
+        tot_samples = 0
+        for client in active_clients:
+            try:
+                client_time_cost = client.train_time_cost['total_cost'] / client.train_time_cost['num_rounds'] + \
+                                   client.send_time_cost['total_cost'] / client.send_time_cost['num_rounds']
+            except ZeroDivisionError:
+                client_time_cost = 0
+            if client_time_cost <= self.time_threthold:
+                tot_samples += client.train_samples
+                self.uploaded_ids.append(client.id)
+                self.uploaded_weights.append(client.train_samples)
+                self.uploaded_models.append(client.model)
+        for i, w in enumerate(self.uploaded_weights):
+            self.uploaded_weights[i] = w / tot_samples
+
+    def receive_grads(self):
+
+        self.grads = copy.deepcopy(self.uploaded_models)
+        # This for copy the list to store all the gradient update value
+
+        for model in self.grads:
+            for param in model.parameters():
+                param.data.zero_()
+
+        for grad_model, local_model in zip(self.grads, self.uploaded_models):
+            for grad_param, local_param, global_param in zip(grad_model.parameters(), local_model.parameters(),
+                                                             self.global_model.parameters()):
+                grad_param.data = local_param.data - global_param.data
+
+        for w, client_model in zip(self.uploaded_weights, self.grads):
+            self.mul_params(w, client_model)
+
+    def mul_params(self, w, client_model):
+        for param in client_model.parameters():
+            param.data = param.data.clone() * w
+
+    def aggregate_parameters(self):
+        assert (len(self.uploaded_models) > 0)
+
+        self.global_model = copy.deepcopy(self.uploaded_models[0])
+        for param in self.global_model.parameters():
+            param.data.zero_()
+
+        for w, client_model in zip(self.uploaded_weights, self.uploaded_models):
+            self.add_parameters(w, client_model)
+
+    def add_parameters(self, w, client_model):
+        for server_param, client_param in zip(self.global_model.parameters(), client_model.parameters()):
+            server_param.data += client_param.data.clone() * w
+
+    def save_global_model(self):
+        model_path = os.path.join("models", self.dataset)
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+        model_path = os.path.join(model_path, self.algorithm + "_server" + ".pt")
+        torch.save(self.global_model, model_path)
+
+    def load_model(self):
+        model_path = os.path.join("models", self.dataset)
+        model_path = os.path.join(model_path, self.algorithm + "_server" + ".pt")
+        assert (os.path.exists(model_path))
+        self.global_model = torch.load(model_path)
+
+    def model_exists(self):
+        model_path = os.path.join("models", self.dataset)
+        model_path = os.path.join(model_path, self.algorithm + "_server" + ".pt")
+        return os.path.exists(model_path)
+
+    def save_results(self):
+        algo = self.dataset + "_" + self.algorithm
+        result_path = "../results/"
+        if not os.path.exists(result_path):
+            os.makedirs(result_path)
+
+        if (len(self.rs_test_acc)):
+            algo = algo + "_" + self.goal + "_" + str(self.times)
+            file_path = result_path + "{}.h5".format(algo)
+            print("File path: " + file_path)
+
+            with h5py.File(file_path, 'w') as hf:
+                hf.create_dataset('rs_test_acc', data=self.rs_test_acc)
+                hf.create_dataset('rs_test_auc', data=self.rs_test_auc)
+                hf.create_dataset('rs_train_loss', data=self.rs_train_loss)
+
+    def save_item(self, item, item_name):
+        if not os.path.exists(self.save_folder_name):
+            os.makedirs(self.save_folder_name)
+        torch.save(item, os.path.join(self.save_folder_name, "server_" + item_name + ".pt"))
+
+    def load_item(self, item_name):
+        return torch.load(os.path.join(self.save_folder_name, "server_" + item_name + ".pt"))
 
     def test_metrics(self):
-        testloaderfull = self.load_test_data()
-        # self.model = self.load_model('model')
-        # self.model.to(self.device)
-        self.model.eval()
+        if self.eval_new_clients and self.num_new_clients > 0:
+            self.fine_tuning_new_clients()
+            return self.test_metrics_new_clients()
 
-        test_acc = 0
-        test_num = 0
-        y_prob = []
-        y_true = []
-        
-        with torch.no_grad():
-            for x, y in testloaderfull:
-                if type(x) == type([]):
-                    x[0] = x[0].to(self.device)
-                else:
-                    x = x.to(self.device)
-                y = y.to(self.device)
-                output = self.model(x)
+        num_samples = []
+        tot_correct = []
+        tot_auc = []
+        for c in self.clients:
+            ct, ns, auc = c.test_metrics()
+            tot_correct.append(ct * 1.0)
+            tot_auc.append(auc * ns)
+            num_samples.append(ns)
 
-                test_acc += (torch.sum(torch.argmax(output, dim=1) == y)).item()
-                test_num += y.shape[0]
+        ids = [c.id for c in self.clients]
 
-                y_prob.append(output.detach().cpu().numpy())
-                nc = self.num_classes
-                if self.num_classes == 2:
-                    nc += 1
-                lb = label_binarize(y.detach().cpu().numpy(), classes=np.arange(nc))
-                if self.num_classes == 2:
-                    lb = lb[:, :2]
-                y_true.append(lb)
-
-        # self.model.cpu()
-        # self.save_model(self.model, 'model')
-
-        y_prob = np.concatenate(y_prob, axis=0)
-        y_true = np.concatenate(y_true, axis=0)
-
-        auc = metrics.roc_auc_score(y_true, y_prob, average='micro')
-        
-        return test_acc, test_num, auc
+        return ids, num_samples, tot_correct, tot_auc
 
     def train_metrics(self):
-        trainloader = self.load_train_data()
-        # self.model = self.load_model('model')
-        # self.model.to(self.device)
-        self.model.eval()
+        if self.eval_new_clients and self.num_new_clients > 0:
+            return [0], [1], [0]
 
-        train_num = 0
-        losses = 0
-        with torch.no_grad():
-            for x, y in trainloader:
-                if type(x) == type([]):
-                    x[0] = x[0].to(self.device)
+        num_samples = []
+        losses = []
+        for c in self.clients:
+            cl, ns = c.train_metrics()
+            num_samples.append(ns)
+            losses.append(cl * 1.0)
+
+        ids = [c.id for c in self.clients]
+
+        return ids, num_samples, losses
+
+    # evaluate selected clients
+    def evaluate(self, acc=None, loss=None):
+        stats = self.test_metrics()
+        stats_train = self.train_metrics()
+        test_acc = sum(stats[2]) * 1.0 / sum(stats[1])
+        test_auc = sum(stats[3]) * 1.0 / sum(stats[1])
+        train_loss = sum(stats_train[2]) * 1.0 / sum(stats_train[1])
+        accs = [a / n for a, n in zip(stats[2], stats[1])]
+        aucs = [a / n for a, n in zip(stats[3], stats[1])]
+        if acc == None:
+            self.rs_test_acc.append(test_acc)
+        else:
+            acc.append(test_acc)
+
+        if loss == None:
+            self.rs_train_loss.append(train_loss)
+        else:
+            loss.append(train_loss)
+
+        print("Averaged Train Loss: {:.4f}".format(train_loss))
+        print("Averaged Test Accuracy: {:.4f}".format(test_acc))
+        print("Averaged Test AUC: {:.4f}".format(test_auc))
+        # self.print_(test_acc, train_acc, train_loss)
+        print("Std Test Accuracy: {:.4f}".format(np.std(accs)))
+        print("Std Test AUC: {:.4f}".format(np.std(aucs)))
+
+        if self.args.log:
+            self.writer.add_scalar("charts/train_loss", train_loss, self.current_round)
+            wandb.log({"charts/train_loss": train_loss}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_acc", test_acc, self.current_round)
+            wandb.log({"charts/test_acc": test_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc", test_auc, self.current_round)
+            wandb.log({"charts/test_auc": test_auc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_acc_std", test_acc_std, self.current_round)
+            wandb.log({"charts/test_acc_std": test_acc_std}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_std", test_auc_std, self.current_round)
+            wandb.log({"charts/test_auc_std": test_auc_std}, step=self.current_round)
+
+            self.current_round += 1
+
+    def FUL_evaluate(self, acc=None, loss=None):
+        if self.args.log:
+            self.current_round += 1
+
+        """ Start """
+        stats = self.test_metrics()
+        stats_train = self.train_metrics()
+
+        test_acc = sum(stats[2]) * 1.0 / sum(stats[1])
+        test_auc = sum(stats[3]) * 1.0 / sum(stats[1])
+        train_loss = sum(stats_train[2]) * 1.0 / sum(stats_train[1])
+        accs = [a / n for a, n in zip(stats[2], stats[1])]
+        aucs = [a / n for a, n in zip(stats[3], stats[1])]
+
+        if acc == None:
+            self.rs_test_acc.append(test_acc)
+        else:
+            acc.append(test_acc)
+
+        if loss == None:
+            self.rs_train_loss.append(train_loss)
+        else:
+            loss.append(train_loss)
+
+        test_auc_std = np.std(accs)
+        print("Averaged Train Loss: {:.4f}".format(train_loss))
+        print("Averaged Test Accuracy: {:.4f}".format(test_acc))
+        print("Averaged Test AUC: {:.4f}".format(test_auc))
+        print("Std Test Accuracy: {:.4f}".format(np.std(accs)))
+        print("Std Test AUC: {:.4f}".format(np.std(aucs)))
+
+        # Initialize variables to accumulate the total accuracy and number of clients for both groups
+        forget_acc_sum = 0
+        forget_samples_sum = 0
+        forget_auc_sum = 0
+        retain_acc_sum = 0
+        retain_samples_sum = 0
+        retain_auc_sum = 0
+
+        r_acc_dict = {}
+        f_acc_dict = {}
+        r_auc_dict = {}
+        f_auc_dict = {}
+        # Loop through all clients and separate based on whether their id is in the forget_list
+
+        for client_id, accuracy, auc, num_samples in zip(stats[0], stats[2], stats[3], stats[1]):
+            if client_id in self.forget_list:
+                # Sum up accuracy and samples for clients in forget_list
+                forget_acc_sum += accuracy
+                forget_auc_sum += auc
+                acc_progress = accuracy - self.last_acc[client_id]
+                self.last_acc[client_id] = accuracy
+                forget_samples_sum += num_samples
+                r_acc_dict[f"{client_id}"] = accuracy/num_samples
+                r_auc_dict[f"{client_id}"] = auc/num_samples
+                if self.args.log:
+                    # Client Accuracy
+                    self.writer.add_scalar(f"client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
+                    # Client Accuracy Gain
+                    self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
+            else:
+                # Sum up accuracy and samples for clients in retain_list
+                retain_acc_sum += accuracy
+                retain_auc_sum += auc
+                retain_samples_sum += num_samples
+                f_acc_dict[f"{client_id}"] = accuracy/num_samples
+                f_auc_dict[f"{client_id}"] = auc/num_samples
+                acc_progress = accuracy - self.last_acc[client_id]
+                self.last_acc[client_id] = accuracy
+                if self.args.log:
+                # Client Accuracy
+                    self.writer.add_scalar(f"client-charts/client{client_id}_acc", accuracy/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_acc": accuracy/num_samples}, step=self.current_round)
+                    # Client Accuracy Gain
+                    self.writer.add_scalar(f"client-charts/client{client_id}_progress", acc_progress/num_samples, self.current_round)
+                    wandb.log({f"client-charts/client{client_id}_progress": acc_progress/num_samples}, step=self.current_round)
+
+
+        # Calculate the test accuracy for clients in the forget list
+        test_forget_acc = forget_acc_sum / forget_samples_sum if forget_samples_sum != 0 else 0
+        test_forget_auc = forget_auc_sum / forget_samples_sum if forget_samples_sum != 0 else 0
+
+        # Calculate the test accuracy for clients not in the forget list
+        test_retain_acc = retain_acc_sum / retain_samples_sum if retain_samples_sum != 0 else 0
+        test_retain_auc = retain_auc_sum / retain_samples_sum if retain_samples_sum != 0 else 0
+
+        print(f"Test Forget Accuracy: {test_forget_acc}")
+        print(f"Test Retain Accuracy: {test_retain_acc}")
+        print(f"======= Client Acc =======")
+        r_acc_dict = {k: r_acc_dict[k] for k in sorted(r_acc_dict, reverse=True)}
+        f_acc_dict = {k: f_acc_dict[k] for k in sorted(f_acc_dict, reverse=True)}
+        print(r_acc_dict)
+        print(f_acc_dict)
+        print(f"======= Client AUC =======")
+        r_auc_dict = {k: r_auc_dict[k] for k in sorted(r_auc_dict, reverse=True)}
+        f_auc_dict = {k: f_auc_dict[k] for k in sorted(f_auc_dict, reverse=True)}
+        print(r_auc_dict)
+        print(f_auc_dict)
+
+        test_acc_std = np.std(accs).item()
+        test_auc_std = np.std(aucs).item()
+
+        if self.args.log:
+            self.writer.add_scalar("charts/train_loss", train_loss, self.current_round)
+            wandb.log({"charts/train_loss": train_loss}, step=self.current_round)
+
+            # Test Accuracy
+            self.writer.add_scalar("charts/test_acc", test_acc, self.current_round)
+            wandb.log({"charts/test_acc": test_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc", test_auc, self.current_round)
+            wandb.log({"charts/test_auc": test_auc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_acc_std", test_acc_std, self.current_round)
+            wandb.log({"charts/test_acc_std": test_acc_std}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_std", test_auc_std, self.current_round)
+            wandb.log({"charts/test_auc_std": test_auc_std}, step=self.current_round)
+
+            # Test Retain Accuracy
+            self.writer.add_scalar("charts/test_acc_r", test_retain_acc, self.current_round)
+            wandb.log({"charts/test_acc_r": test_retain_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_r", test_retain_auc, self.current_round)
+            wandb.log({"charts/test_auc_r": test_retain_auc}, step=self.current_round)
+
+            # Test Forget Accuracy
+            self.writer.add_scalar("charts/test_acc_f", test_forget_acc, self.current_round)
+            wandb.log({"charts/test_acc_f": test_forget_acc}, step=self.current_round)
+
+            self.writer.add_scalar("charts/test_auc_f", test_forget_auc, self.current_round)
+            wandb.log({"charts/test_auc_f": test_forget_auc}, step=self.current_round)
+
+    def print_(self, test_acc, test_auc, train_loss):
+        print("Average Test Accurancy: {:.4f}".format(test_acc))
+        print("Average Test AUC: {:.4f}".format(test_auc))
+        print("Average Train Loss: {:.4f}".format(train_loss))
+
+    def check_done(self, acc_lss, top_cnt=None, div_value=None):
+        for acc_ls in acc_lss:
+            if top_cnt != None and div_value != None:
+                find_top = len(acc_ls) - torch.topk(torch.tensor(acc_ls), 1).indices[0] > top_cnt
+                find_div = len(acc_ls) > 1 and np.std(acc_ls[-top_cnt:]) < div_value
+                if find_top and find_div:
+                    pass
                 else:
-                    x = x.to(self.device)
-                y = y.to(self.device)
-                output = self.model(x)
-                loss = self.loss(output, y)
-                train_num += y.shape[0]
-                losses += loss.item() * y.shape[0]
+                    return False
+            elif top_cnt != None:
+                find_top = len(acc_ls) - torch.topk(torch.tensor(acc_ls), 1).indices[0] > top_cnt
+                if find_top:
+                    pass
+                else:
+                    return False
+            elif div_value != None:
+                find_div = len(acc_ls) > 1 and np.std(acc_ls[-top_cnt:]) < div_value
+                if find_div:
+                    pass
+                else:
+                    return False
+            else:
+                raise NotImplementedError
+        return True
 
-        # self.model.cpu()
-        # self.save_model(self.model, 'model')
+    def call_dlg(self, R):
+        # items = []
+        cnt = 0
+        psnr_val = 0
+        for cid, client_model in zip(self.uploaded_ids, self.uploaded_models):
+            client_model.eval()
+            origin_grad = []
+            for gp, pp in zip(self.global_model.parameters(), client_model.parameters()):
+                origin_grad.append(gp.data - pp.data)
 
-        return losses, train_num
+            target_inputs = []
+            trainloader = self.clients[cid].load_train_data()
+            with torch.no_grad():
+                for i, (x, y) in enumerate(trainloader):
+                    if i >= self.batch_num_per_client:
+                        break
 
-    # def get_next_train_batch(self):
-    #     try:
-    #         # Samples a new batch for persionalizing
-    #         (x, y) = next(self.iter_trainloader)
-    #     except StopIteration:
-    #         # restart the generator if the previous generator is exhausted.
-    #         self.iter_trainloader = iter(self.trainloader)
-    #         (x, y) = next(self.iter_trainloader)
+                    if type(x) == type([]):
+                        x[0] = x[0].to(self.device)
+                    else:
+                        x = x.to(self.device)
+                    y = y.to(self.device)
+                    output = client_model(x)
+                    target_inputs.append((x, output))
 
-    #     if type(x) == type([]):
-    #         x = x[0]
-    #     x = x.to(self.device)
-    #     y = y.to(self.device)
+            d = DLG(client_model, origin_grad, target_inputs)
+            if d is not None:
+                psnr_val += dold_model
+                cnt += 1
 
-    #     return x, y
+            # items.append((client_model, origin_grad, target_inputs))
 
+        if cnt > 0:
+            print('PSNR value is {:.2f} dB'.format(psnr_val / cnt))
+        else:
+            print('PSNR error')
 
-    def save_item(self, item, item_name, item_path=None):
-        if item_path == None:
-            item_path = self.save_folder_name
-        if not os.path.exists(item_path):
-            os.makedirs(item_path)
-        torch.save(item, os.path.join(item_path, "client_" + str(self.id) + "_" + item_name + ".pt"))
+        # self.save_item(items, f'DLG_{R}')
 
-    def load_item(self, item_name, item_path=None):
-        if item_path == None:
-            item_path = self.save_folder_name
-        return torch.load(os.path.join(item_path, "client_" + str(self.id) + "_" + item_name + ".pt"))
+    def set_new_clients(self, clientObj):
+        for i in range(self.num_clients, self.num_clients + self.num_new_clients):
+            train_data = read_client_data(self.dataset, i, is_train=True)
+            test_data = read_client_data(self.dataset, i, is_train=False)
+            client = clientObj(self.args,
+                               id=i,
+                               train_samples=len(train_data),
+                               test_samples=len(test_data),
+                               train_slow=False,
+                               send_slow=False)
+            self.new_clients.append(client)
 
-    # @staticmethod
-    # def model_exists():
-    #     return os.path.exists(os.path.join("models", "server" + ".pt"))
+    # fine-tuning on new clients
+    def fine_tuning_new_clients(self):
+        for client in self.new_clients:
+            client.set_parameters(self.global_model)
+            opt = torch.optim.SGD(client.model.parameters(), lr=self.learning_rate)
+            CEloss = torch.nn.CrossEntropyLoss()
+            trainloader = client.load_train_data()
+            client.model.train()
+            for e in range(self.fine_tuning_epoch_new):
+                for i, (x, y) in enumerate(trainloader):
+                    if type(x) == type([]):
+                        x[0] = x[0].to(client.device)
+                    else:
+                        x = x.to(client.device)
+                    y = y.to(client.device)
+                    output = client.model(x)
+                    loss = CEloss(output, y)
+                    opt.zero_grad()
+                    loss.backward()
+                    opt.step()
+
+    # evaluating on new clients
+    def test_metrics_new_clients(self):
+        num_samples = []
+        tot_correct = []
+        tot_auc = []
+        for c in self.new_clients:
+            ct, ns, auc = c.test_metrics()
+            tot_correct.append(ct * 1.0)
+            tot_auc.append(auc * ns)
+            num_samples.append(ns)
+
+        ids = [c.id for c in self.new_clients]
+
+        return ids, num_samples, tot_correct, tot_auc
+
+    def diff_weight(self, model1, model2):
+        params1 = [p.data for p in model1.parameters()]
+        params2 = [p.data for p in model2.parameters()]
+
+        # Tính hiệu và norm của hiệu giữa các parameter tương ứng
+        diff_norms = [torch.norm(p1 - p2, p='fro') for p1, p2 in zip(params1, params2)]
+
+        # Tính tổng (hoặc trung bình) của các norm này để có một đại lượng đơn lẻ mô tả sự khác biệt
+        total_diff_norm = torch.sum(torch.stack(diff_norms))
+        return total_diff_norm.item()
+
+    def cos_sim(self, prev_model, model1, model2):
+        prev_param = torch.cat([p.data.view(-1) for p in prev_model.parameters()])
+        params1 = torch.cat([p.data.view(-1) for p in model1.parameters()])
+        params2 = torch.cat([p.data.view(-1) for p in model2.parameters()])
+
+        grad1 = params1 - prev_param
+        grad2 = params2 - prev_param
+        # print(f"g1:{torch.norm(grad1)}|g2:{torch.norm(grad2)}")
+
+        cos_sim = torch.dot(grad1, grad2) / (torch.norm(grad1) * torch.norm(grad2))
+        # if torch.isnan(cos_sim):
+        #     print("cos_sim is NaN.")
+        #     print("value of params1", params1)
+        #     # print("value of params2", params)
+        #     print("Value of grad1:", grad1)
+        #     print("Value of grad2:", grad2)
+        return cos_sim.item()
+
+    def cosine_similarity(self, model1, model2):
+        params1 = torch.cat([p.data.view(-1) for p in model1.parameters()])
+        params2 = torch.cat([p.data.view(-1) for p in model2.parameters()])
+        cos_sim = torch.dot(params1, params2) / (torch.norm(params1) * torch.norm(params2))
+        return cos_sim.item()
