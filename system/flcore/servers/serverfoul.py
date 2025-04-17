@@ -282,7 +282,7 @@ class FOUL(Server):
             # Step 4: Stack the balanced gradients into a tensor
             retain_grad_tensor = torch.stack(balanced_retain_grads).cpu()
         else:
-            retain_grad_tensor = torch.stack(forget_grads).cpu()
+            retain_grad_tensor = torch.stack(retain_grads).cpu()
 
 
 

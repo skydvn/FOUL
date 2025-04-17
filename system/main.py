@@ -130,6 +130,7 @@ def run(args):
             # feature_dim = list(args.model.fc.parameters())[0].shape[1]
             # args.model.fc = nn.Linear(feature_dim, args.num_classes).to(args.device)
 
+
         elif model_str == "LSTM":
             args.model = LSTMNet(hidden_dim=args.feature_dim, vocab_size=args.vocab_size,
                                  num_classes=args.num_classes).to(args.device)
