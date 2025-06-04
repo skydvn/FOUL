@@ -27,7 +27,7 @@ class CONDA(Server):
         self.dampening_constant = args.dampening_constant  # lambda 10 for MNIST, 1 for CIFAR-10 and CIFAR100
         self.cutoff_alpha = args.cutoff_alpha  # alpha para
         self.dampening_upper_bound = args.dampening_upper_bound  # U -- as per the paper for MNIST 10 and 1 for cifar10 and 100
-        self.forget_clients = set()  # need to get this from the args todo setup
+        self.forget_list = [args.f_index * 5 + i for i in range(5)]  # need to get this from the args todo setup
 
         print(f"\nJoin ratio / total clients: {self.join_ratio} / {self.num_clients}")
         print("Finished creating server and clients.")
@@ -146,7 +146,7 @@ class CONDA(Server):
 
                 all_gradients.append(gradient)  ## then looping through all clients
                 ##forget clients update
-                if client.id in self.forget_clients:
+                if client.id in self.forget_list:
                     forget_gradients.append(gradient)
 
             ## SSD stuff (selective synaptic damping ( i dont know why they use this name instead of parameter dampening))
@@ -159,7 +159,7 @@ class CONDA(Server):
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)
 
-            self.aggregate_parameters(beta, ratio)
+            self.aggregate_parameters()
 
             self.Budget.append(time.time() - s_t)
             print('-' * 25, 'time cost', '-' * 25, self.Budget[-1])
@@ -172,7 +172,7 @@ class CONDA(Server):
         #     self.rs_train_acc), min(self.rs_train_loss))
         print(max(self.rs_test_acc))
         print("\nAverage time cost per round.")
-        print(sum(self.Budget[1:]) / len(self.Budget[1:]))
+        #print(sum(self.Budget[1:]) / len(self.Budget[1:]))
 
         self.save_results()
         self.save_global_model()

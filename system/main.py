@@ -354,7 +354,7 @@ if __name__ == "__main__":
     parser.add_argument('-learn_round', "--learn_round", type=int, default=50,
                         help="Number of clients we want to do learn")
     # parser.add_argument('-learn_percentage', "--learn_percentage", type=int, default=50,help="Number of clients we want to do learn")
-    parser.add_argument('-f_index', "--f_index", type=int, default=3, help="Index of forget set")
+    parser.add_argument('-f_index', "--f_index", type=int, nargs='+', default=3, help="List of client indices to forget")
     parser.add_argument('-log', "--log", action='store_true')
 
     ### FOUL

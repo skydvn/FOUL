@@ -175,7 +175,7 @@ class Retrain(Server):
                     self.writer.add_scalar(f"client-charts/client{client.id}_angle", cos, self.current_round)
                     wandb.log({f"client-charts/client{client.id}_angle": cos}, step=self.current_round)
 
-\
+
             for client in self.unselected_clients:
                 client_clone = copy.deepcopy(client)
                 client_clone.train()
