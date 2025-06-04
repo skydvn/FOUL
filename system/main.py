@@ -31,6 +31,8 @@ from flcore.servers.serverfoul import FOUL
 from flcore.servers.serverufoul import UFOUL
 from flcore.servers.serverretrain import Retrain
 from flcore.servers.serverconda import CONDA
+from flcore.servers.serverMoDe import ServerMoDe
+
 
 from flcore.trainmodel.models import *
 
@@ -204,6 +206,11 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = Retrain(args, i)
+        elif args.algorithm == 'MODE':
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = ServerMoDe(args, i)
         else:
             raise NotImplementedErrorFOUL
 
