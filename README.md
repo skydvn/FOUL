@@ -13,11 +13,11 @@ python generate_PACS1.py iid balance -
 To Run FedAvg Algorithm:
 ```
 cd system/
-python main.py --learn False --learn_count 50
+python main.py --learn False --learn_round 50
 ```
 
 ```
-python main.py --learn unlearn --learn_count 50 --algo FOUL 
+python main.py --learn unlearn --learn_round 50 --algo FOUL 
 ```
 
 ## Exact Unlearning Algorithms
