@@ -37,6 +37,10 @@ class ServerMoDe(Server):
         # self.load_model()
         self.Budget = []
 
+        lambda_momentum = 0.5
+        r_de = 5
+        r_max = 8
+
     def train(self):
         """Fed learning stage"""
         print("\n======================================")
@@ -110,7 +114,7 @@ class ServerMoDe(Server):
             print("\nEvaluate new clients")
             self.evaluate()
 
-    def unlearn(self, forget_clients, lambda_momentum=0.5, r_de=5, r_max=8):
+    def unlearn(self, forget_clients):
         """
         Implements the MoDe unlearning process.
         Args:
