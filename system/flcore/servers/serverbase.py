@@ -93,6 +93,8 @@ class Server(object):
         self.forget_list = [args.f_index * 5 + i for i in range(5)]
         self.last_acc = [0 for _ in range(self.num_clients)]
 
+        print(f"forget_list: {self.forget_list}")
+
         if self.args.log:
             args.run_name = (f"{args.algorithm}__{args.dataset}__{args.num_clients}__"
                              f"{args.local_epochs}__{args.beta_foul}__{int(time.time())}")

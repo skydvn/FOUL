@@ -39,6 +39,8 @@ class CONDA(Server):
         if self.unlearn_round < 0:
             raise ValueError("The global rounds must be higher than learn round")
 
+        print(f"round learn: {self.learn_round} | round unlearn: {self.unlearn_round}")
+
         self.device = args.device
         self.Budget = []
 
@@ -51,7 +53,7 @@ class CONDA(Server):
             self.send_models()
 
             if i % self.eval_gap == 0:
-                print(f"\n-------------Round number: {i}-------------")
+                print(f"\n------------- Round number: {i} - {self.current_round} -------------")
                 print("\nEvaluate global model")
                 self.FUL_evaluate()
 
@@ -98,6 +100,10 @@ class CONDA(Server):
             if self.auto_break and self.check_done(acc_lss=[self.rs_test_acc], top_cnt=self.top_cnt):
                 break
 
+            if self.args.log:
+                wandb.log({f"charts/zeta": 0}, step=self.current_round)
+                wandb.log({f"charts/dampening": 0}, step=self.current_round)
+
         print("\nBest accuracy.")
         # self.print_(max(self.rs_test_acc), max(
         #     self.rs_train_acc), min(self.rs_train_loss))
@@ -122,7 +128,7 @@ class CONDA(Server):
             self.send_models()
 
             if i % self.eval_gap == 0:
-                print(f"\n-------------Round number: {i}-------------")
+                print(f"\n------------- Round number: {i} - {self.current_round} -------------")
                 print("\nEvaluate global model")
                 self.FUL_evaluate()
 
@@ -136,7 +142,7 @@ class CONDA(Server):
 
             self.receive_models()
 
-            ## parametters in CONDA paper
+            ## parameters in CONDA paper
             all_gradients = []
             forget_gradients = []
 
@@ -150,12 +156,16 @@ class CONDA(Server):
                 if client.id in self.forget_list:
                     forget_gradients.append(gradient)
 
-            ## SSD stuff (selective synaptic damping ( i dont know why they use this name instead of parameter dampening))
+            ## SSD stuff (selective synaptic damping (i dont know why they use this name instead of parameter dampening))
             ratio = self.compute_conda_ratio(all_gradients, forget_gradients)
             zeta = self.dampening_constant * ratio
             beta = min(zeta, self.dampening_upper_bound)
 
             print(f"CONDA - Round {i}: ratio = {ratio:.4f}, dampening = {beta:.4f}")
+
+            if self.args.log:
+                wandb.log({f"charts/zeta": zeta}, step=self.current_round)
+                wandb.log({f"charts/dampening": beta}, step=self.current_round)
 
             if self.dlg_eval and i % self.dlg_gap == 0:
                 self.call_dlg(i)

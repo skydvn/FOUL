@@ -13,8 +13,7 @@ import statistics
 
 from torch.utils.tensorboard import SummaryWriter
 import wandb
-## implmentation o
-
+## implementation
 
 class ServerMoDe(Server):
     def __init__(self, args, times):
@@ -37,9 +36,9 @@ class ServerMoDe(Server):
         # self.load_model()
         self.Budget = []
 
-        lambda_momentum = 0.5
-        r_de = 5
-        r_max = 8
+        self.lambda_momentum = 0.5
+        self.r_de = 5
+        self.r_max = 8
 
     def train(self):
         """Fed learning stage"""
