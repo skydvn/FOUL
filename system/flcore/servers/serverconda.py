@@ -15,7 +15,8 @@ import statistics
 
 from torch.utils.tensorboard import SummaryWriter
 import wandb
-## implmentation of the server conda algo
+
+## implementation of the server conda algo
 class CONDA(Server):
     def __init__(self, args, times):
         super().__init__(args, times)

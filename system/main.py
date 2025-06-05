@@ -31,7 +31,7 @@ from flcore.servers.serverfoul import FOUL
 from flcore.servers.serverufoul import UFOUL
 from flcore.servers.serverretrain import Retrain
 from flcore.servers.serverconda import CONDA
-from flcore.servers.serverMoDe import ServerMoDe
+from flcore.servers.serverMODE import ServerMoDe
 
 
 from flcore.trainmodel.models import *
