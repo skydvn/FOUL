@@ -24,6 +24,17 @@ from flcore.clients.clientbase import Client
 class clientUFOUL(Client):
     def __init__(self, args, id, train_samples, test_samples, **kwargs):
         super().__init__(args, id, train_samples, test_samples, **kwargs)
+        # TODO L_inv + L_var
+        # TODO Optimizers for Proto-Enc + NonProto-Enc
+
+        # TODO L_cls
+        # TODO Optimizers for Shared-Enc + Proto-Enc + NonProto-Enc + Aux-Head
+
+        # TODO L_rec
+        # TODO Optimizers for Shared-Enc + Proto-Enc + NonProto-Enc + Aux-Dec
+
+        # TODO L_adv
+        # TODO Optimizers for Aux-Head + Proto-Enc
 
     def train(self):
         trainloader = self.load_train_data()

@@ -164,7 +164,7 @@ class UFOUL(Server):
                 self.FUL_evaluate()
 
             for client in self.selected_clients:
-                client.train()
+                client.unlearn()
 
             # threads = [Thread(target=client.train)
             #            for client in self.selected_clients]
