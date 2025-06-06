@@ -53,7 +53,7 @@ class CONDA(Server):
             self.send_models()
 
             if i % self.eval_gap == 0:
-                print(f"\n------------- Round number: {i} - {self.current_round} -------------")
+                print(f"\n------------- Round number: {i} -------------")
                 print("\nEvaluate global model")
                 self.FUL_evaluate()
 
@@ -128,7 +128,7 @@ class CONDA(Server):
             self.send_models()
 
             if i % self.eval_gap == 0:
-                print(f"\n------------- Round number: {i} - {self.current_round} -------------")
+                print(f"\n------------- Round number: {i} -------------")
                 print("\nEvaluate global model")
                 self.FUL_evaluate()
 
@@ -146,15 +146,23 @@ class CONDA(Server):
             all_gradients = []
             forget_gradients = []
 
-            for client in self.selected_clients:
-                gradient = []
-                for server_param, client_param in zip(self.global_model.parameters(), client.model.parameters()):
-                    gradient.append(client_param.data - server_param.data)  ## grad difference in equation
+            # TODO Create Undampening Blah Blah
+            # get client-wise contribution for current iteration.
+            client_contributions = get_client_contribution()
 
-                all_gradients.append(gradient)  ## then looping through all clients
-                ##forget clients update
-                if client.id in self.forget_list:
-                    forget_gradients.append(gradient)
+            # Add in the contributions for each client
+            for client_id, contributions in client_contributions.items():
+
+                # If the contributions doesn't exist for the client_id, make an empty dict.
+                if avg_contributions.get(client_id) is None:
+                    avg_contributions[client_id] = dict()
+
+                # Iterate through each param and add in the contributions
+                for param in start_model.keys():
+                    # If the param id doesn't exists, add a zero vector.
+                    if avg_contributions[client_id].get(param) is None:
+                        avg_contributions[client_id][param] = torch.zeros_like(contributions[param])
+                    avg_contributions[client_id][param] += contributions[param]
 
             ## SSD stuff (selective synaptic damping (i dont know why they use this name instead of parameter dampening))
             ratio = self.compute_conda_ratio(all_gradients, forget_gradients)
@@ -195,14 +203,71 @@ class CONDA(Server):
             print("\nEvaluate new clients")
             self.FUL_evaluate()
 
-    def compute_conda_ratio(self, all_gradients, forget_gradients):
-        """Compute the ratio of gradient norms for CONDA dampening"""
-        if not forget_gradients:
-            return 1.0
+    def get_client_contribution(self, start_model: OrderedDict, weights_path: str):
+        checkpoint_list = os.listdir(weights_path)
+        checkpoint_list = [checkpoint for checkpoint in checkpoint_list if
+                           checkpoint.startswith("client_") and checkpoint.endswith(".pth")]
+        checkpoint_list = [int(checkpoint[7:-4]) for checkpoint in checkpoint_list]
+        checkpoint_list.sort()
 
-        all_avg = sum(all_gradients) / len(all_gradients)
+        client_wise_differences = dict()
+        for client_id in checkpoint_list:
+            client_weights = torch.load(os.path.join(weights_path, f"client_{client_id}.pth"), map_location='cpu')
+            difference = dict()
+            for param in start_model.keys():
+                difference[param] = torch.abs(start_model[param] - client_weights[param])
+            client_wise_differences[client_id] = difference
 
-        forget_avg = sum(forget_gradients) / len(forget_gradients)
+        return client_wise_differences
 
-        ratio = torch.norm(all_avg) / (torch.norm(forget_avg) + 1e-8)
-        return ratio
+    def get_group_contribution(self, contributions):
+        """
+        Get the average contribution of the group.
+        """
+        avg_contributions = dict()
+        for key in contributions[0].keys():
+            avg_contributions[key] = torch.zeros_like(contributions[0][key])
+            for i in range(len(contributions)):
+                avg_contributions[key] += contributions[i][key]
+            avg_contributions[key] = torch.div(avg_contributions[key], len(contributions))
+        return avg_contributions
+
+    def apply_dampening(self, forget_client_contributions, retain_clients_contirbutions, dampening_constant,
+                        dampening_upper_bound, ratio_cutoff):
+        """
+        Apply dampening to the global model based on the gradients of the local models.
+        Args:
+            global_model: The global model which will be dampened.
+            forget_client_contributions: The gradient contributions of the forget clients/models.
+            retain_clients_contributions: The gradient contributions of the retain clients/models.
+            dampening_constant: The dampening constant.
+            dampening_upper_bound: The upper bound for the final dampening factor. Used to cap the increasing of
+            the parameters.
+            ratio_cutoff: The cutoff/filter factor for ratios. Any parameter having the ratio greater than this value will not be updated.
+              A high ratio means less contribution of the forget model, leading to less dampening.
+        Returns:
+            The updated global model.
+        """
+
+        with torch.no_grad():
+            for (global_name, forget_grads), (index, retain_grads) in zip(
+                    forget_client_contributions.items(),
+                    retain_clients_contirbutions.items()
+            ):
+
+                if len(forget_grads.shape) > 0:
+                    # Synapse Dampening with parameter dampening constant
+                    weight = global_model[global_name]
+                    # diff = torch.abs(g2_grads - g1_grads) # torch.abs(torch.abs(g2_grads) - torch.abs(g1_grads))
+                    retain_contribution = torch.abs(retain_grads)  # epsilon
+                    forget_contribution = torch.abs(forget_grads)
+                    ratio = retain_contribution / forget_contribution
+                    update_locations = (ratio < ratio_cutoff)
+                    dampening_factor = torch.mul(ratio, dampening_constant)
+
+                    update = dampening_factor[update_locations]
+                    # Bound by 1 to prevent parameter values to increase.
+                    min_locs = (update > dampening_upper_bound)
+                    update[min_locs] = dampening_upper_bound
+                    weight[update_locations] = weight[update_locations].mul(update)
+        return global_model
