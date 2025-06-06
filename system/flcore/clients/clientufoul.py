@@ -19,6 +19,7 @@ import copy
 import torch
 import numpy as np
 import time
+from itertools import chain
 from flcore.clients.clientbase import Client
 
 class clientUFOUL(Client):
@@ -26,15 +27,66 @@ class clientUFOUL(Client):
         super().__init__(args, id, train_samples, test_samples, **kwargs)
         # TODO L_inv + L_var
         # TODO Optimizers for Proto-Enc + NonProto-Enc
+        self.proto_optimizer = torch.optim.SGD(
+            chain(self.model.inv_encoder.parameters(),
+                  self.model.var_encoder.parameters()
+                  ),
+            lr=self.learning_rate
+        )
+        self.proto_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=self.proto_optimizer,
+            gamma=args.learning_rate_decay_gamma
+        )
 
         # TODO L_cls
         # TODO Optimizers for Shared-Enc + Proto-Enc + NonProto-Enc + Aux-Head
+        self.cls_optimizer = torch.optim.SGD(
+            chain(
+                self.model.encoder.parameters(),
+                self.model.inv_encoder.parameters(),
+                self.model.var_encoder.parameters(), # FIXME Do we need to optimize this
+                self.model.aux_head.parameters(),
+                ),
+            lr=self.learning_rate
+        )
+        self.cls_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=self.cls_optimizer,
+            gamma=args.learning_rate_decay_gamma
+        )
+
+        # TODO L_adv
+        # TODO Optimizers for Shared-Enc + Proto-Enc + NonProto-Enc + Adv-Head
+        self.adv_optimizer = torch.optim.SGD(
+            chain(
+                self.model.encoder.parameters(),     # FIXME Do we need to optimize this
+                self.model.inv_encoder.parameters(),
+                self.model.var_encoder.parameters(), # FIXME Do we need to optimize this
+                self.model.adv_head.parameters(),
+                ),
+            lr=self.learning_rate
+        )
+        self.adv_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=self.adv_optimizer,
+            gamma=args.learning_rate_decay_gamma
+        )
 
         # TODO L_rec
         # TODO Optimizers for Shared-Enc + Proto-Enc + NonProto-Enc + Aux-Dec
+        self.meaning_optimizer = torch.optim.SGD(
+            chain(
+                self.model.encoder.parameters(),
+                self.model.inv_encoder.parameters(),
+                self.model.var_encoder.parameters(),
+                self.model.aux_decoder.parameters(),
+                ),
+            lr=self.learning_rate
+        )
+        self.meaning_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=self.meaning_optimizer,
+            gamma=args.learning_rate_decay_gamma
+        )
 
-        # TODO L_adv
-        # TODO Optimizers for Aux-Head + Proto-Enc
+        self.learning_rate_decay = args.learning_rate_decay
 
     def train(self):
         trainloader = self.load_train_data()

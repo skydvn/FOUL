@@ -214,6 +214,13 @@ class UResNet(nn.Module):
                 elif isinstance(m, BasicBlock) and m.bn2.weight is not None:
                     nn.init.constant_(m.bn2.weight, 0)  # type: ignore[arg-type]
 
+        self.encoder = nn.Sequential(
+            self.conv1,
+            self.bn1,
+            self.relu,
+            self.maxpool
+        )
+
         self.inv_encoder = nn.Sequential() ## creating the invariant encoder
         for i in range(len(self.layers)):
             layer = getattr(self, f'layer_{i}')
@@ -277,10 +284,7 @@ class UResNet(nn.Module):
         return layers
 
     def _forward_impl(self, x: Tensor) -> Tensor:
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        x = self.encoder(x)
         x1 = x
         x2 = x
 
