@@ -14,3 +14,4 @@ seaborn==0.13.0
 tensorboard==2.14.1
 ujson==5.8.0
 wandb==0.15.12
+torchvision
