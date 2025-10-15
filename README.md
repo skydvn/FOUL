@@ -31,3 +31,14 @@ python main.py --learn joint -gr 150 --learn_round 100 --algo Retrain --local_ep
 ```
 python main.py --learn joint -gr 150 --learn_round 100 --algo FOUL --local_epochs 2 -lbs 32 --beta_foul 3.5 --log
 ```
+### FUSED 
+'''
+python main.py -data PACS -m CNN -algo FUSED \
+               -gr 20 -ls 3 -lr 0.01 \
+               -nc 20 -nb 7 \
+               -ncl 6 -sr 0.9 \
+               -ut domain -ud 0 \
+               -lm learn -lrnd 15 \
+               -wb \
+               -did 0
+'''
