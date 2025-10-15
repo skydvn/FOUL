@@ -211,19 +211,24 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = ServerMoDe(args, i)
+        elif args.algorithm == 'FUSED':
+            from flcore.servers.serverFUSED import FUSED
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = FUSED(args, i)
         else:
             raise NotImplementedErrorFOUL
 
         """ Start of the learn/unlearn process"""
-        if args.learn == "learn":
+        if args.learn_mode == 'learn':
             print("Learn")
-            server.train()  ##
-        elif args.learn == "unlearn":
-            # Load models first
+            server.train()
+        elif args.learn_mode == 'unlearn':
             print("Unlearn")
-            server.unlearn()  ## if unlearning
-        else:
-            print("Joint Learn + Unlearn")
+            server.unlearn()
+        elif args.learn_mode == 'joint':
+            print("Joint Learn & Unlearn")
             server.train()
             server.unlearn()
 
@@ -356,10 +361,11 @@ if __name__ == "__main__":
     parser.add_argument('-foulmlr', "--meta_lr", type=float, default=0.5)
 
     ### unlearning arguments to be mentioned here
-    parser.add_argument('-learn', '--learn', type=str, default="learn", help='Learn or Unlearn should be '
-                                                                             'mentioned here by default will learn')
-    parser.add_argument('-learn_round', "--learn_round", type=int, default=50,
-                        help="Number of clients we want to do learn")
+    parser.add_argument('-lm', "--learn_mode", type=str, default='learn',
+                    choices=['learn', 'unlearn', 'joint'],
+                    help="Learn or Unlearn mode (default: learn)")
+    parser.add_argument('-lmr', "--learn_mode_rounds", type=int, default=50,
+                    help="Number of rounds for learn mode before unlearning")
     # parser.add_argument('-learn_percentage', "--learn_percentage", type=int, default=50,help="Number of clients we want to do learn")
     parser.add_argument('-f_index', "--f_index", type=int, nargs='+', default=3, help="List of client indices to forget")
     parser.add_argument('-log', "--log", action='store_true')
@@ -375,7 +381,42 @@ if __name__ == "__main__":
     parser.add_argument('-dampening_upper_bound', "--dampening_upper_bound", type=float, default=1.0,help='U 10 for MNIST, 1 for CIFAR-10 and CIFAR100' )
     parser.add_argument('-cutoff_alpha', "--cutoff_alpha", type=float, default=1.0)
 
+    ### FUSED
+    # Add these arguments after existing argument definitions
+    parser.add_argument('-ncl', "--num_critical_layers", type=int, default=4,
+                help="Number of critical layers to identify for unlearning")
+    parser.add_argument('-sr', "--sparsity_ratio", type=float, default=0.9,
+                        help="Sparsity ratio for adapters (0.9 = 90%% sparse)")
+    parser.add_argument('-uc', "--unlearning_clients", type=int, nargs='+', default=[0],
+                        help="List of client IDs to unlearn (e.g., -uc 0 1 2)")
+    parser.add_argument('-ut', "--unlearning_type", type=str, default='client',
+                        choices=['client', 'domain', 'class', 'sample'],
+                        help="Type of unlearning: client-level, domain-level, class-level, or sample-level")
+    parser.add_argument('-ud', "--unlearning_domain", type=int, default=0,
+                        help="Domain ID to unlearn (0-3 for PACS: 0=art_painting, 1=cartoon, 2=photo, 3=sketch)")
+    parser.add_argument('-fc', "--forget_class", type=int, default=None,
+                        help="Class label to forget (for class-level unlearning)")
+
+    
+    parser.add_argument('-wb', "--use_wandb", action='store_true',
+                    help="Enable Weights & Biases logging")
+
+                    
+
+
+
+
     args = parser.parse_args()
+
+
+    # ============ COMPATIBILITY LAYER ============
+    # Map new argument names to old FOUL/serverbase expected names
+    if not hasattr(args, 'learn') or args.learn is None:
+        args.learn = args.learn_mode
+    
+    # Ensure learn_round exists (already defined, but double-check)
+    if not hasattr(args, 'learn_round'):
+        args.learn_round = args.learn_mode_rounds
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_id
 
