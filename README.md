@@ -58,7 +58,7 @@ FOUL/
 ### Prerequisites
 
 - Python 3.8+
-- CUDA-compatible GPU (recommendCan wed)
+- CUDA-compatible GPU (recommend)
 
 ### Option 1: Conda (Recommended)
 
