@@ -20,7 +20,7 @@
 Standard federated unlearning approaches require either full model retraining or heavy client-side computation, making them impractical at scale. FOUL decouples the unlearning burden from clients entirely by resolving **gradient conflicts on the server side**, dramatically reducing both communication overhead and computational cost while preserving model performance on remaining clients.
 
 <div align="center">
-  <img src="structure.png" alt="FOUL Framework Overview" width="80%"/>
+  <img src="FOUL Architecture.png" alt="FOUL Framework Overview" width="80%"/>
   <p><em>Overview of the FOUL framework architecture.</em></p>
 </div>
 
