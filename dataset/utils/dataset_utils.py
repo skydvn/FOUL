@@ -21,9 +21,9 @@ import numpy as np
 import gc
 from sklearn.model_selection import train_test_split
 
-batch_size = 10
-train_ratio = 0.75 # merge original training set and test set, then split it manually. 
-alpha = 0.1 # for Dirichlet distribution. 100 for exdir
+batch_size = 64
+train_ratio = 0.80 # merge original training set and test set, then split it manually. 
+alpha = 100 # for Dirichlet distribution. 100 for exdir
 
 def check(config_path, train_path, test_path, num_clients, niid=False, 
         balance=True, partition=None):
@@ -228,7 +228,7 @@ def split_data(X, y):
 
     for i in range(len(y)):
         X_train, X_test, y_train, y_test = train_test_split(
-            X[i], y[i], train_size=train_ratio, shuffle=True)
+            X[i], y[i], train_size=train_ratio, shuffle=True, stratify=y[i])
 
         train_data.append({'x': X_train, 'y': y_train})
         num_samples['train'].append(len(y_train))
@@ -294,8 +294,9 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
     - In the future, it can be looped over domains "d"
     """
     dataset_content, dataset_label = data
+
     # guarantee that each client must have at least one batch of data for testing.
-    least_samples = int(min(batch_size / (1 - train_ratio), len(dataset_label) / num_clients / 2))
+    least_samples = int(min(batch_size / (1 - train_ratio), min([len(domain_samples) for domain_samples in dataset_label]) / num_clients / 2))
 
     dataidx_map = {}
 
@@ -330,6 +331,7 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
             -  
             """
             class_num_per_client = [class_per_client for _ in range(num_dclients[i_domain])]
+            # [7, 7, 7, 7, 7]
             print(f"len: {len(class_num_per_client)}| {class_num_per_client}")
             
 
@@ -383,31 +385,49 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
         """ Non-IID and DIR 
         https://github.com/IBM/probabilistic-federated-neural-matching/blob/master/experiment.py
         """
+
+        client_per_domain = int(num_clients / num_domains) # assume that num_clients is divisible by num_domains, fix later
         """ Loop over domains here """
-        min_size = 0
-        K = num_classes
-        N = len(dataset_label)
+        for i_domain in range(num_domains):
+            clients = [i for i in range(i_domain * client_per_domain, (i_domain + 1) * client_per_domain)] # assume equal clients per domain
+            print(f"Domain {i_domain}: clients {clients}")
 
-        try_cnt = 1
-        while min_size < least_samples:
-            if try_cnt > 1:
-                print(
-                    f'Client data size does not meet the minimum requirement {least_samples}. Try allocating again for the {try_cnt}-th time.')
+            idxs = np.array(range(len(dataset_label[i_domain])))  # Get indexes of all values in "dataset_label" of domain
 
-            idx_batch = [[] for _ in range(num_clients)]
-            for k in range(K):
-                idx_k = np.where(dataset_label == k)[0]
-                np.random.shuffle(idx_k)
-                proportions = np.random.dirichlet(np.repeat(alpha, num_clients))
-                proportions = np.array([p * (len(idx_j) < N / num_clients) for p, idx_j in zip(proportions, idx_batch)])
-                proportions = proportions / proportions.sum()
-                proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
-                idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
+            min_size = 0
+            K = num_classes
+            N = len(dataset_label[i_domain])
+
+            try_cnt = 1
+            retry = False
+            while min_size < least_samples or retry:
+                if try_cnt > 1:
+                    print(
+                        f'Client data size does not meet the minimum requirement {least_samples}. Try allocating again for the {try_cnt}-th time.')
+
+                idx_batch = [[] for _ in range(client_per_domain)]
+                for k in range(K):
+                    idx_k = np.where(dataset_label[i_domain] == k)[0]
+                    np.random.shuffle(idx_k)
+                    proportions = np.random.dirichlet(np.repeat(alpha, client_per_domain))
+                    proportions = np.array([p * (len(idx_j) < N / client_per_domain) for p, idx_j in zip(proportions, idx_batch)])
+                    proportions = proportions / proportions.sum()
+                    proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+                    idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
+                
                 min_size = min([len(idx_j) for idx_j in idx_batch])
-            try_cnt += 1
+                retry = False
+                for j in range(client_per_domain):
+                    unique_classes = np.unique(dataset_label[i_domain][idx_batch[j]])
+                    min_samples_per_class = min([len(np.where(dataset_label[i_domain][idx_batch[j]] == c)[0]) for c in unique_classes])
+                    print(f"Client {clients[j]}: min samples per class: {min_samples_per_class}")
+                    if min_samples_per_class < 10:
+                        retry = True
+                        break
+                try_cnt += 1
 
-        for j in range(num_clients):
-            dataidx_map[j] = idx_batch[j]
+                for j, client in enumerate(clients):
+                    dataidx_map[client] = idx_batch[j]
 
 
     elif partition == 'exdir':
@@ -426,66 +446,71 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
             {0: [0, 1], 1: [1, 2], 2: [2, 3], 3: [3, 4], 4: [4, 5], 5: [5, 6], 6: [6, 7], 7: [7, 8], 8: [8, 9], 9: [9, 0]}
         """
         """ Loop over domains here """
-        min_size_per_label = 0
-        # You can adjust the `min_require_size_per_label` to meet you requirements
-        min_require_size_per_label = max(C * num_clients // num_classes // 2, 1)
-        if min_require_size_per_label < 1:
-            raise ValueError
-        clientidx_map = {}
-        while min_size_per_label < min_require_size_per_label:
-            # initialize
-            for k in range(num_classes):
-                clientidx_map[k] = []
-            # allocate
-            for i in range(num_clients):
-                labelidx = np.random.choice(range(num_classes), C, replace=False)
-                for k in labelidx:
-                    clientidx_map[k].append(i)
-            min_size_per_label = min([len(clientidx_map[k]) for k in range(num_classes)])
+        for i_domain in range(num_domains):
+            client_per_domain = int(num_clients / num_domains)
+            clients = [i for i in range(i_domain * client_per_domain, (i_domain + 1) * client_per_domain)]  # assume equal clients per domain
+            print(f"Domain {i_domain}: clients {clients}")
+            
+            min_size_per_label = 0
+            # You can adjust the `min_require_size_per_label` to meet you requirements
+            min_require_size_per_label = max(C * client_per_domain // num_classes // 2, 1)
+            if min_require_size_per_label < 1:
+                raise ValueError
+            clientidx_map = {}
+            while min_size_per_label < min_require_size_per_label:
+                # initialize
+                for k in range(num_classes):
+                    clientidx_map[k] = []
+                # allocate
+                for i in range(client_per_domain):
+                    labelidx = np.random.choice(range(num_classes), C, replace=False)
+                    for k in labelidx:
+                        clientidx_map[k].append(i)
+                min_size_per_label = min([len(clientidx_map[k]) for k in range(num_classes)])
 
-        '''The second level: allocate data idx'''
-        dataidx_map = {}
-        y_train = dataset_label
-        min_size = 0
-        min_require_size = 10
-        K = num_classes
-        N = len(y_train)
-        print("\n*****clientidx_map*****")
-        print(clientidx_map)
-        print("\n*****Number of clients per label*****")
-        print([len(clientidx_map[i]) for i in range(len(clientidx_map))])
+            '''The second level: allocate data idx'''
+            y_train = dataset_label[i_domain]
+            min_size = 0
+            min_require_size = 20
+            K = num_classes
+            N = len(y_train)
+            print("\n*****clientidx_map*****")
+            print(clientidx_map)
+            print("\n*****Number of clients per label*****")
+            print([len(clientidx_map[i]) for i in range(len(clientidx_map))])
 
-        # ensure per client' sampling size >= min_require_size (is set to 10 originally in [3])
-        while min_size < min_require_size:
-            idx_batch = [[] for _ in range(num_clients)]
-            # for each class in the dataset
-            for k in range(K):
-                idx_k = np.where(y_train == k)[0]
-                np.random.shuffle(idx_k)
-                proportions = np.random.dirichlet(np.repeat(alpha, num_clients))
-                # Balance
-                # Case 1 (original case in Dir): Balance the number of sample per client
-                proportions = np.array(
-                    [p * (len(idx_j) < N / num_clients and j in clientidx_map[k]) for j, (p, idx_j) in
-                     enumerate(zip(proportions, idx_batch))])
-                # Case 2: Don't balance
-                # proportions = np.array([p * (j in label_netidx_map[k]) for j, (p, idx_j) in enumerate(zip(proportions, idx_batch))])
-                proportions = proportions / proportions.sum()
-                proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
-                # process the remainder samples
-                '''Note: Process the remainder data samples (yipeng, 2023-11-14).
-                There are some cases that the samples of class k are not allocated completely, i.e., proportions[-1] < len(idx_k)
-                In these cases, the remainder data samples are assigned to the last client in `clientidx_map[k]`.
-                '''
-                if proportions[-1] != len(idx_k):
-                    for w in range(clientidx_map[k][-1], num_clients - 1):
-                        proportions[w] = len(idx_k)
-                idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
-                min_size = min([len(idx_j) for idx_j in idx_batch])
+            # ensure per client' sampling size >= min_require_size (is set to 10 originally in [3])
+            while min_size < min_require_size:
+                idx_batch = [[] for _ in range(client_per_domain)]
+                # for each class in the dataset
+                for k in range(K):
+                    idx_k = np.where(y_train == k)[0]
+                    np.random.shuffle(idx_k)
+                    proportions = np.random.dirichlet(np.repeat(alpha, client_per_domain))
+                    # Balance
+                    # Case 1 (original case in Dir): Balance the number of sample per client
+                    proportions = np.array(
+                        [p * (len(idx_j) < N / client_per_domain and j in clientidx_map[k]) for j, (p, idx_j) in
+                        enumerate(zip(proportions, idx_batch))])
+                    # Case 2: Don't balance
+                    # proportions = np.array([p * (j in label_netidx_map[k]) for j, (p, idx_j) in enumerate(zip(proportions, idx_batch))])
+                    proportions = proportions / proportions.sum()
+                    proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+                    # process the remainder samples
+                    '''Note: Process the remainder data samples (yipeng, 2023-11-14).
+                    There are some cases that the samples of class k are not allocated completely, i.e., proportions[-1] < len(idx_k)
+                    In these cases, the remainder data samples are assigned to the last client in `clientidx_map[k]`.
+                    '''
+                    if proportions[-1] != len(idx_k):
+                        for w in range(clientidx_map[k][-1], client_per_domain - 1):
+                            proportions[w] = len(idx_k)
+                    idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
+                    min_size = min([len(idx_j) for idx_j in idx_batch])
 
-        for j in range(num_clients):
-            np.random.shuffle(idx_batch[j])
-            dataidx_map[j] = idx_batch[j]
+                for j in range(client_per_domain):
+                    np.random.shuffle(idx_batch[j])
+                    print(clients[j], len(idx_batch[j]))
+                    dataidx_map[clients[j]] = idx_batch[j]
 
     else:
         raise NotImplementedError
@@ -495,7 +520,9 @@ def separate_domain_data(data, num_clients, num_classes, num_domains,
 
     # assign data
     for i_domain in range(num_domains):
-        for client in range(num_clients):
+        client_per_domain = int(num_clients / num_domains)
+        client_range = range(i_domain * client_per_domain, (i_domain + 1) * client_per_domain)
+        for client in client_range:
             idxs = dataidx_map[client]
           
             if max(idxs) >= len(dataset_content[i_domain]):

@@ -54,7 +54,7 @@ def read_pacs_data(dataset_path, domain_name, split="train"):
             line = line.strip()
             data_path, label = line.split(' ')
             data_path = path.join(dataset_path, data_path)
-            label = int(label)
+            label = int(label) - 1  # make labels start from 0
             data_paths.append(data_path)
             data_labels.append(label)
     return data_paths, data_labels
@@ -98,9 +98,11 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     # Get PACS data
     if not os.path.exists(root):
         os.makedirs(root)
-        os.system(f'cd {root}')
-        os.system(f'git clone https://github.com/MachineLearning2020/Homework3-PACS.git')
-        # os.system(f'mv PACS/ ../')
+        os.system(f'cd {root} && git clone https://github.com/MachineLearning2020/Homework3-PACS.git')
+        # copy folders in Homework3-PACS/PACS to current root
+        os.system(f'cd {root} && cp -r Homework3-PACS/PACS/* .')
+        os.system(f'cd {root} && rm -rf Homework3-PACS')
+        os.system(f'unzip -d PACS/rawdata ../splits.zip')
 
     ## the data_loader will split into test and train sets
     X, y = [], []
