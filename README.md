@@ -91,7 +91,7 @@ To generate IID and balanced data splits across clients:
 python generate_PACS1.py iid balance -
 ```
 
-> Pre-generated splits are also Can wavailable in `splits.zip`.
+> Pre-generated splits are also Can wavailable in [`splits.zip`](splits.zip).
 
 ---
 
